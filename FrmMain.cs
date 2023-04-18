@@ -5,9 +5,9 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
-using static RE4_PS2_TPL_Util.TPLDefinition;
+using static RE4_PS2_TPL_Manager.TPLDefinition;
 
-namespace RE4_PS2_TPL_Util
+namespace RE4_PS2_TPL_Manager
 {
     public partial class FrmMain : Form
     {
@@ -114,6 +114,8 @@ namespace RE4_PS2_TPL_Util
             TPL.tplCount = br.ReadUInt32();
             br.Close();
 
+            UpdateStatusText("Extracting {TPL.tplCount} textures...");
+
             for (int i = 0; i < TPL.tplCount; i++)
             {
                 // Returns to header position on each iteration
@@ -125,7 +127,7 @@ namespace RE4_PS2_TPL_Util
                 // =========================================
                 // Writing new .tpl file
                 string extractFileName = table.Rows[i].Cells[1].Value.ToString();
-                DirectoryInfo folder = Directory.CreateDirectory(Path.GetFileNameWithoutExtension(filepath));
+                DirectoryInfo folder = Directory.CreateDirectory("Extracted/" + Path.GetFileNameWithoutExtension(filepath));
                 BinaryWriter bw = new BinaryWriter(File.Open($"Extracted/{folder.Name}/{extractFileName}", FileMode.Create));
 
                 bw.Write(TPL.magic);
@@ -255,6 +257,7 @@ namespace RE4_PS2_TPL_Util
                     }
                 }
             }
+            UpdateStatusText(TPL.tplCount.ToString() + " textures extracted to " + $"'Extracted/{Path.GetFileNameWithoutExtension(filepath)}'");
             br.Close();
         }
         private void AddNewTextures()
@@ -645,7 +648,7 @@ namespace RE4_PS2_TPL_Util
             TPL.startOffset = br.ReadUInt32();
             TPL.unused1 = br.ReadUInt32();
 
-            // Returns to header position on each iteration
+            // Get every parameter
             br.BaseStream.Position = 0x10 + (0x30 * textureIndex);
             TPL.width = br.ReadUInt16();
             TPL.height = br.ReadUInt16();
@@ -671,6 +674,10 @@ namespace RE4_PS2_TPL_Util
             TPL.unused5 = br.ReadByte();
             TPL.endTag = br.ReadByte();
 
+            // Get whole header into a byte array
+            br.BaseStream.Position = 0x10 + (0x30 * textureIndex);
+            TPL.header = br.ReadBytes(0x30);
+
             // Get pixels indices and palette
             br.BaseStream.Position = TPL.pixelsOffset;
             if (TPL.bitDepth == 8)
@@ -689,7 +696,120 @@ namespace RE4_PS2_TPL_Util
             {
                 TPL.pixels = br.ReadBytes(TPL.width * TPL.height);
             }
+
+            // Get mipmap headers and pixels
+            if (TPL.mipmapCount > 0)
+            {
+                // Get header 1
+                br.BaseStream.Position = TPL.mipmapOffset1;
+                TPL.mipmapHeader1 = br.ReadBytes(0x30);
+
+                // Get pixels 1
+                br.BaseStream.Position = TPL.mipmapOffset1;
+                MipMap.width = br.ReadUInt16();
+                MipMap.height = br.ReadUInt16();
+                MipMap.bitDepth = br.ReadUInt16();
+
+                br.BaseStream.Position = TPL.mipmapOffset1 + 0x20;
+                MipMap.pixelsOffset = br.ReadUInt32();
+
+                br.BaseStream.Position = MipMap.pixelsOffset;
+                if (MipMap.bitDepth == 8)
+                {
+                    TPL.mipmapPixels1 = br.ReadBytes((MipMap.width * MipMap.height) / 2);
+                }
+                else if (MipMap.bitDepth == 9 || MipMap.bitDepth == 6)
+                {
+                    TPL.mipmapPixels1 = br.ReadBytes(MipMap.width * MipMap.height);
+                }
+
+                // Get header 2
+                br.BaseStream.Position = TPL.mipmapOffset2;
+                TPL.mipmapHeader2 = br.ReadBytes(0x30);
+
+                // Get pixels 2
+                br.BaseStream.Position = TPL.mipmapOffset2;
+                MipMap.width = br.ReadUInt16();
+                MipMap.height = br.ReadUInt16();
+                MipMap.bitDepth = br.ReadUInt16();
+
+                br.BaseStream.Position = TPL.mipmapOffset2 + 0x20;
+                MipMap.pixelsOffset = br.ReadUInt32();
+
+                br.BaseStream.Position = MipMap.pixelsOffset;
+                if (MipMap.bitDepth == 8)
+                {
+                    TPL.mipmapPixels2 = br.ReadBytes((MipMap.width * MipMap.height) / 2);
+                }
+                else if (MipMap.bitDepth == 9 || MipMap.bitDepth == 6)
+                {
+                    TPL.mipmapPixels2 = br.ReadBytes(MipMap.width * MipMap.height);
+                }
+
+            }
             br.Close();
+        }
+        private void WriteTexture(int rowNumber)
+        {
+            // =========================================
+            // Writing new .tpl file
+            string extractFileName = table.Rows[rowNumber].Cells[1].Value.ToString();
+            DirectoryInfo folder = Directory.CreateDirectory("Extracted/" + Path.GetFileNameWithoutExtension(filepath));
+            BinaryWriter bw = new BinaryWriter(File.Open($"Extracted/{folder.Name}/{extractFileName}", FileMode.Create));
+
+            bw.Write(TPL.magic);
+            bw.Write((uint)0x01);
+            bw.Write(TPL.startOffset);
+            bw.Write(TPL.unused1);
+            bw.Write(TPL.width);
+            bw.Write(TPL.height);
+            bw.Write(TPL.bitDepth);
+            bw.Write(TPL.interlace);
+            bw.Write(TPL.zPriority);
+            bw.Write(TPL.mipmapCount);
+            bw.Write(TPL.scale);
+            bw.Write(TPL.unused2);
+            bw.Write((uint)(0x00));
+            bw.Write((uint)(0x00));
+            bw.Write((uint)(0x00));
+            bw.Write((uint)(0x00));
+            bw.Write((uint)0x40);
+            if (TPL.bitDepth == 8)
+            {
+                bw.Write((TPL.width * TPL.height) / 2 + 0x40);
+            }
+            else if (TPL.bitDepth == 9)
+            {
+                bw.Write((TPL.width * TPL.height) + 0x40);
+            }
+            bw.Write(TPL.unused3);
+            bw.Write(TPL.config1);
+            bw.Write(TPL.config2);
+            bw.Write(TPL.config3);
+            bw.Write(TPL.unused4);
+            bw.Write(TPL.unused5);
+            bw.Write(TPL.endTag);
+            bw.Write(TPL.pixels);
+            bw.Write(TPL.palette);
+            bw.Close();
+        }
+        private int GetTotalMipmapCount()
+        {
+            BinaryReader br = new BinaryReader(File.Open(filepath, FileMode.Open));
+            TPL.magic = br.ReadUInt32();
+            TPL.tplCount = br.ReadUInt32();
+            TPL.startOffset = br.ReadUInt32();
+            TPL.unused1 = br.ReadUInt32();
+
+            int mipmapCount = 0;
+            for (int i = 0; i < TPL.tplCount; i++)
+            {
+                br.BaseStream.Position = 0x1A + (0x30 * i);
+                mipmapCount += br.ReadInt16();
+            }
+            br.Close();
+
+            return mipmapCount;
         }
         private void UpdateStatusText(string text)
         {
@@ -832,7 +952,149 @@ namespace RE4_PS2_TPL_Util
         {
             // Temporary workaround
             ConverterBMP converterBMP = new ConverterBMP();
-            converterBMP.TPLtoBMP(filepath);
+            converterBMP.TPLtoBMP(filepath, "BMP");
+        }
+        private void RemoveAll()
+        {
+            DialogResult confirmBoxResult = MessageBox.Show("Are you sure? This action cannot be undone.", "Question",
+                 MessageBoxButtons.OKCancel, MessageBoxIcon.Question);
+            if (confirmBoxResult == DialogResult.OK)
+            {
+                BinaryWriter bw = new BinaryWriter(File.Open(filepath, FileMode.Create));
+                bw.Write((uint)4096);
+                bw.Write((uint)0x00);
+                bw.Write((uint)0x10);
+                bw.Write((uint)0x00);
+                bw.Close();
+
+                table.Rows.Clear();
+                lblStatusText.Text = "All textures removed successfully";
+                progressBar.Value = progressBar.Maximum;
+            }
+            else
+            {
+                return;
+            }
+        }
+        private void Duplicate()
+        {
+            // Checks if prompt is disabled
+            if (!disableDuplicatePromptToolStripMenuItem.Checked)
+            {
+                DialogResult result = MessageBox.Show("This option will not duplicate mipmaps and will overwrite the file, duplicate anyway?"
+                    , "Question", MessageBoxButtons.OKCancel, MessageBoxIcon.Question);
+                if (result != DialogResult.OK)
+                {
+                    return;
+                }
+            }
+            // If user clicks on OK
+            ReadTexture(filepath, selectedRowIndexGlobal);
+
+            BinaryReader br = new BinaryReader(File.Open(filepath, FileMode.Open));
+            byte[] topPart = br.ReadBytes((int)(0x10 + (0x30 * TPL.tplCount)));
+            byte[] bottomPart = br.ReadBytes((int)(br.BaseStream.Length - br.BaseStream.Position));
+            br.Close();
+
+            // Overwrite .tpl and insert new duplicated texture
+            BinaryWriter bw = new BinaryWriter(File.Open(filepath, FileMode.Create));
+            bw.Write(topPart);
+            bw.Write(TPL.header);
+            bw.Write(bottomPart);
+            bw.Write(TPL.pixels);
+            bw.Write(TPL.palette);
+
+            // Update texture count
+            bw.BaseStream.Position = 0x04;
+            bw.Write(TPL.tplCount + 1);
+            bw.Close();
+
+            UpdateStatusText($"Texture {selectedRowIndexGlobal} duplicated");
+            progressBar.Value = progressBar.Maximum;
+            UpdateAllOffsets(filepath);
+        }
+        private void Replace()
+        {
+            ReadTexture(filepath, selectedRowIndexGlobal);
+
+            BinaryReader br = new BinaryReader(File.Open(filepath, FileMode.Open));
+
+            // From the beginning to the start of the header
+            byte[] part1 = br.ReadBytes(0x10 + (0x30 * selectedRowIndexGlobal));
+            br.BaseStream.Position += 0x30;
+
+            // After the header to the start of the pixels chunk
+            byte[] part2 = br.ReadBytes((int)(TPL.pixelsOffset - br.BaseStream.Position));
+            br.BaseStream.Position += TPL.pixels.Length;
+
+            // After the pixels chunk to the start of the palette chunk
+            byte[] part3 = br.ReadBytes((int)(TPL.paletteOffset - br.BaseStream.Position));
+            br.BaseStream.Position += TPL.palette.Length;
+
+            // After the palette chunk to the end of the file
+            byte[] part4 = br.ReadBytes((int)(br.BaseStream.Length - br.BaseStream.Position));
+            br.Close();
+
+            OpenFileDialog fileDialog = new OpenFileDialog();
+            fileDialog.Filter = "RE4 PS2 TPL Files (*.tpl)|*.tpl";
+            fileDialog.ShowDialog();
+
+            if (fileDialog.FileName != "")
+            {
+                BinaryReader br2 = new BinaryReader(File.Open(fileDialog.FileName, FileMode.Open));
+                br2.BaseStream.Position = 0x10;
+                ushort width = br2.ReadUInt16();
+                ushort height = br2.ReadUInt16();
+                ushort bitDepth = br2.ReadUInt16();
+
+                br2.BaseStream.Position = 0x30;
+                uint pixelsOffset = br2.ReadUInt32();
+                uint paletteOffset = br2.ReadUInt32();
+
+                // Get header
+                br2.BaseStream.Position = 0x10;
+                byte[] header = br2.ReadBytes(0x30);
+                byte[] pixels = null;
+                byte[] palette = null;
+
+                // Get pixels indices
+                br2.BaseStream.Position = pixelsOffset;
+                if (bitDepth == 8)
+                {
+                    pixels = br2.ReadBytes(width * height / 2);
+                }
+                else if (bitDepth == 9 || bitDepth == 6)
+                {
+                    pixels = br2.ReadBytes(width * height);
+                }
+
+                // Get palette
+                br2.BaseStream.Position = paletteOffset;
+                if (bitDepth == 8)
+                {
+                    palette = br2.ReadBytes(width * height / 2);
+                }
+                else if (bitDepth == 9 || bitDepth == 6)
+                {
+                    palette = br2.ReadBytes(width * height);
+                }
+                br2.Close();
+
+                // Overwrite .tpl and replace texture
+                BinaryWriter bw = new BinaryWriter(File.Open(filepath, FileMode.Create));
+                bw.Write(part1);
+                bw.Write(header);
+                bw.Write(part2);
+                bw.Write(pixels);
+                bw.Write(part3);
+                bw.Write(palette);
+                bw.Write(part4);
+                bw.Close();
+
+                UpdateStatusText("Texture replaced successfully");
+                UpdateAllOffsets(filepath);
+                FillTable();
+            }
         }
         private void openTPLFileToolStripMenuItem_Click(object sender, EventArgs e)
         {
@@ -957,38 +1219,44 @@ namespace RE4_PS2_TPL_Util
             bw.Write(TPL.palette);
             bw.Close();
         }
-
         private void replaceToolStripMenuItem_Click(object sender, EventArgs e)
         {
-
+            Replace();
         }
-
         private void duplicateToolStripMenuItem_Click(object sender, EventArgs e)
         {
-
+            Duplicate();
         }
-
         private void removeAllToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            DialogResult confirmBoxResult = MessageBox.Show("Are you sure? This action cannot be undone.", "Question",
-                 MessageBoxButtons.OKCancel, MessageBoxIcon.Question);
-            if (confirmBoxResult == DialogResult.OK)
+            RemoveAll();
+        }
+        private void convertAllToPNGToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            ConverterBMP converterBMP = new ConverterBMP();
+            converterBMP.TPLtoBMP(filepath, "PNG");
+        }
+        private void creditsToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            Credits credits = new Credits();
+            credits.Show();
+        }
+        private void extractSelectedToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            foreach (DataGridViewRow row in table.SelectedRows)
             {
-                BinaryWriter bw = new BinaryWriter(File.Open(filepath, FileMode.Create));
-                bw.Write((uint)4096);
-                bw.Write((uint)0x00);
-                bw.Write((uint)0x10);
-                bw.Write((uint)0x00);
-                bw.Close();
-
-                table.Rows.Clear();
-                lblStatusText.Text = "All textures removed successfully";
-                progressBar.Value = progressBar.Maximum;
-            }
-            else
-            {
-                return;
+                try
+                {
+                    ReadTexture(filepath, row.Index);
+                    WriteTexture(row.Index);
+                    UpdateStatusText("Texture(s) extracted");
+                }
+                catch (Exception exc)
+                {
+                    MessageBox.Show(exc.Message);
+                }
             }
         }
+
     }
 }

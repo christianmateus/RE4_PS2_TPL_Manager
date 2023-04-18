@@ -3,7 +3,7 @@ using System.Drawing;
 using System.IO;
 using System.Windows.Forms;
 
-namespace RE4_PS2_TPL_Util
+namespace RE4_PS2_TPL_Manager
 {
     public struct BMP
     {
@@ -60,7 +60,7 @@ namespace RE4_PS2_TPL_Util
 
     public class ConverterBMP
     {
-        public void TPLtoBMP(string tplFile)
+        public void TPLtoBMP(string tplFile, string fileType)
         {
             BinaryReader br = new BinaryReader(File.Open(tplFile, FileMode.Open));
 
@@ -149,7 +149,14 @@ namespace RE4_PS2_TPL_Util
                         bitmap.RotateFlip(RotateFlipType.Rotate90FlipX);
                     }
                     bitmap.RotateFlip(RotateFlipType.RotateNoneFlipY);
-                    bitmap.Save("Converted/" + folderName + "/" + tplNumber + ".bmp", System.Drawing.Imaging.ImageFormat.Bmp);
+                    if (fileType == "BMP")
+                    {
+                        bitmap.Save("Converted/" + folderName + "/" + tplNumber + ".bmp", System.Drawing.Imaging.ImageFormat.Bmp);
+                    }
+                    else if (fileType == "PNG")
+                    {
+                        bitmap.Save("Converted/" + folderName + "/" + tplNumber + ".png", System.Drawing.Imaging.ImageFormat.Png);
+                    }
                 }
                 else if (tpl.bitDepth == 0x8 && (tpl.interlace == 0x2 || tpl.interlace == 0x3))
                 {
@@ -278,8 +285,14 @@ namespace RE4_PS2_TPL_Util
                     }
 
                     bitmap.RotateFlip(RotateFlipType.RotateNoneFlipY);
-                    bitmap.Save("Converted/" + folderName + "/" + tplNumber + ".bmp", System.Drawing.Imaging.ImageFormat.Bmp);
-                    continue;
+                    if (fileType == "BMP")
+                    {
+                        bitmap.Save("Converted/" + folderName + "/" + tplNumber + ".bmp", System.Drawing.Imaging.ImageFormat.Bmp);
+                    }
+                    else if (fileType == "PNG")
+                    {
+                        bitmap.Save("Converted/" + folderName + "/" + tplNumber + ".png", System.Drawing.Imaging.ImageFormat.Png);
+                    }
                 }
                 else if (tpl.bitDepth == 0x9 && (tpl.interlace == 0x0 || tpl.interlace == 0x1))
                 {
@@ -352,7 +365,14 @@ namespace RE4_PS2_TPL_Util
                         bitmap.RotateFlip(RotateFlipType.Rotate90FlipX);
                     }
                     bitmap.RotateFlip(RotateFlipType.RotateNoneFlipY);
-                    bitmap.Save("Converted/" + folderName + "/" + tplNumber + ".bmp", System.Drawing.Imaging.ImageFormat.Bmp);
+                    if (fileType == "BMP")
+                    {
+                        bitmap.Save("Converted/" + folderName + "/" + tplNumber + ".bmp", System.Drawing.Imaging.ImageFormat.Bmp);
+                    }
+                    else if (fileType == "PNG")
+                    {
+                        bitmap.Save("Converted/" + folderName + "/" + tplNumber + ".png", System.Drawing.Imaging.ImageFormat.Png);
+                    }
                 }
                 else if (tpl.bitDepth == 0x9 && (tpl.interlace == 0x2 || tpl.interlace == 0x3))
                 {
@@ -447,7 +467,14 @@ namespace RE4_PS2_TPL_Util
                         bitmap.RotateFlip(RotateFlipType.Rotate90FlipX);
                     }
                     bitmap.RotateFlip(RotateFlipType.RotateNoneFlipY);
-                    bitmap.Save("Converted/" + folderName + "/" + tplNumber + ".bmp", System.Drawing.Imaging.ImageFormat.Bmp);
+                    if (fileType == "BMP")
+                    {
+                        bitmap.Save("Converted/" + folderName + "/" + tplNumber + ".bmp", System.Drawing.Imaging.ImageFormat.Bmp);
+                    }
+                    else if (fileType == "PNG")
+                    {
+                        bitmap.Save("Converted/" + folderName + "/" + tplNumber + ".png", System.Drawing.Imaging.ImageFormat.Png);
+                    }
                 }
                 else if (tpl.bitDepth == 0x6 && (tpl.interlace == 0x0 || tpl.interlace == 0x1))
                 {
@@ -489,7 +516,14 @@ namespace RE4_PS2_TPL_Util
                         bitmap.RotateFlip(RotateFlipType.Rotate90FlipX);
                     }
                     bitmap.RotateFlip(RotateFlipType.RotateNoneFlipY);
-                    bitmap.Save("Converted/" + folderName + "/" + tplNumber + ".bmp", System.Drawing.Imaging.ImageFormat.Bmp);
+                    if (fileType == "BMP")
+                    {
+                        bitmap.Save("Converted/" + folderName + "/" + tplNumber + ".bmp", System.Drawing.Imaging.ImageFormat.Bmp);
+                    }
+                    else if (fileType == "PNG")
+                    {
+                        bitmap.Save("Converted/" + folderName + "/" + tplNumber + ".png", System.Drawing.Imaging.ImageFormat.Png);
+                    }
                 }
                 else
                 {

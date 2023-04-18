@@ -1,4 +1,4 @@
-﻿namespace RE4_PS2_TPL_Util
+﻿namespace RE4_PS2_TPL_Manager
 {
     partial class FrmMain
     {
@@ -41,7 +41,6 @@
             this.addNewTexturesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator5 = new System.Windows.Forms.ToolStripSeparator();
             this.removeAllToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.removeSelectedToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator2 = new System.Windows.Forms.ToolStripSeparator();
             this.exportAllToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.exportSelectedToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -49,12 +48,15 @@
             this.convertAllToPNGToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.compileFromFolderToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.toolStripSeparator8 = new System.Windows.Forms.ToolStripSeparator();
+            this.convertAndImportBMPToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.optionsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.includeMipmapToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator3 = new System.Windows.Forms.ToolStripSeparator();
             this.showHiddenToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.showThumbnailsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.helpToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.creditsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.panel1 = new System.Windows.Forms.Panel();
             this.panel2 = new System.Windows.Forms.Panel();
             this.label1 = new System.Windows.Forms.Label();
@@ -71,8 +73,8 @@
             this.convertToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.pNGToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.bMPToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.disableDuplicatePromptToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator7 = new System.Windows.Forms.ToolStripSeparator();
-            this.deleteToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.menuStrip1.SuspendLayout();
             this.panel1.SuspendLayout();
             this.panel2.SuspendLayout();
@@ -89,7 +91,8 @@
             this.textureToolStripMenuItem,
             this.toolsToolStripMenuItem,
             this.optionsToolStripMenuItem,
-            this.helpToolStripMenuItem});
+            this.helpToolStripMenuItem,
+            this.creditsToolStripMenuItem});
             this.menuStrip1.LayoutStyle = System.Windows.Forms.ToolStripLayoutStyle.HorizontalStackWithOverflow;
             this.menuStrip1.Location = new System.Drawing.Point(0, 0);
             this.menuStrip1.Name = "menuStrip1";
@@ -145,7 +148,6 @@
             this.addNewTexturesToolStripMenuItem,
             this.toolStripSeparator5,
             this.removeAllToolStripMenuItem,
-            this.removeSelectedToolStripMenuItem,
             this.toolStripSeparator2,
             this.exportAllToolStripMenuItem,
             this.exportSelectedToolStripMenuItem,
@@ -174,12 +176,6 @@
             this.removeAllToolStripMenuItem.Text = "Remove all";
             this.removeAllToolStripMenuItem.Click += new System.EventHandler(this.removeAllToolStripMenuItem_Click);
             // 
-            // removeSelectedToolStripMenuItem
-            // 
-            this.removeSelectedToolStripMenuItem.Name = "removeSelectedToolStripMenuItem";
-            this.removeSelectedToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
-            this.removeSelectedToolStripMenuItem.Text = "Remove selected";
-            // 
             // toolStripSeparator2
             // 
             this.toolStripSeparator2.Name = "toolStripSeparator2";
@@ -189,14 +185,15 @@
             // 
             this.exportAllToolStripMenuItem.Name = "exportAllToolStripMenuItem";
             this.exportAllToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
-            this.exportAllToolStripMenuItem.Text = "Export all";
+            this.exportAllToolStripMenuItem.Text = "Extract all";
             this.exportAllToolStripMenuItem.Click += new System.EventHandler(this.btnExtract_Click);
             // 
             // exportSelectedToolStripMenuItem
             // 
             this.exportSelectedToolStripMenuItem.Name = "exportSelectedToolStripMenuItem";
             this.exportSelectedToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
-            this.exportSelectedToolStripMenuItem.Text = "Export selected";
+            this.exportSelectedToolStripMenuItem.Text = "Extract selected";
+            this.exportSelectedToolStripMenuItem.Click += new System.EventHandler(this.extractSelectedToolStripMenuItem_Click);
             // 
             // toolStripSeparator6
             // 
@@ -208,11 +205,14 @@
             this.convertAllToPNGToolStripMenuItem.Name = "convertAllToPNGToolStripMenuItem";
             this.convertAllToPNGToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.convertAllToPNGToolStripMenuItem.Text = "Convert all to PNG";
+            this.convertAllToPNGToolStripMenuItem.Click += new System.EventHandler(this.convertAllToPNGToolStripMenuItem_Click);
             // 
             // toolsToolStripMenuItem
             // 
             this.toolsToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.compileFromFolderToolStripMenuItem});
+            this.compileFromFolderToolStripMenuItem,
+            this.toolStripSeparator8,
+            this.convertAndImportBMPToolStripMenuItem});
             this.toolsToolStripMenuItem.Name = "toolsToolStripMenuItem";
             this.toolsToolStripMenuItem.Size = new System.Drawing.Size(46, 20);
             this.toolsToolStripMenuItem.Text = "Tools";
@@ -224,13 +224,26 @@
             this.compileFromFolderToolStripMenuItem.Text = "Compile from folder";
             this.compileFromFolderToolStripMenuItem.Click += new System.EventHandler(this.btnCompileFromFolder_Click);
             // 
+            // toolStripSeparator8
+            // 
+            this.toolStripSeparator8.Name = "toolStripSeparator8";
+            this.toolStripSeparator8.Size = new System.Drawing.Size(179, 6);
+            // 
+            // convertAndImportBMPToolStripMenuItem
+            // 
+            this.convertAndImportBMPToolStripMenuItem.Name = "convertAndImportBMPToolStripMenuItem";
+            this.convertAndImportBMPToolStripMenuItem.Size = new System.Drawing.Size(182, 22);
+            this.convertAndImportBMPToolStripMenuItem.Text = "Convert BMP to TPL";
+            // 
             // optionsToolStripMenuItem
             // 
             this.optionsToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.includeMipmapToolStripMenuItem,
             this.toolStripSeparator3,
             this.showHiddenToolStripMenuItem,
-            this.showThumbnailsToolStripMenuItem});
+            this.showThumbnailsToolStripMenuItem,
+            this.toolStripSeparator7,
+            this.disableDuplicatePromptToolStripMenuItem});
             this.optionsToolStripMenuItem.Name = "optionsToolStripMenuItem";
             this.optionsToolStripMenuItem.Size = new System.Drawing.Size(61, 20);
             this.optionsToolStripMenuItem.Text = "Options";
@@ -272,6 +285,13 @@
             this.helpToolStripMenuItem.Size = new System.Drawing.Size(44, 20);
             this.helpToolStripMenuItem.Text = "Help";
             this.helpToolStripMenuItem.Click += new System.EventHandler(this.helpToolStripMenuItem_Click);
+            // 
+            // creditsToolStripMenuItem
+            // 
+            this.creditsToolStripMenuItem.Name = "creditsToolStripMenuItem";
+            this.creditsToolStripMenuItem.Size = new System.Drawing.Size(56, 20);
+            this.creditsToolStripMenuItem.Text = "Credits";
+            this.creditsToolStripMenuItem.Click += new System.EventHandler(this.creditsToolStripMenuItem_Click);
             // 
             // panel1
             // 
@@ -343,6 +363,7 @@
             this.table.AllowUserToResizeRows = false;
             this.table.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left)));
+            this.table.BackgroundColor = System.Drawing.Color.FromArgb(((int)(((byte)(50)))), ((int)(((byte)(50)))), ((int)(((byte)(50)))));
             this.table.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             this.table.Location = new System.Drawing.Point(3, 0);
             this.table.Name = "table";
@@ -379,11 +400,9 @@
             this.testeToolStripMenuItem,
             this.replaceToolStripMenuItem,
             this.duplicateToolStripMenuItem,
-            this.convertToolStripMenuItem,
-            this.toolStripSeparator7,
-            this.deleteToolStripMenuItem});
+            this.convertToolStripMenuItem});
             this.ctxMenuTable.Name = "contextMenuStrip1";
-            this.ctxMenuTable.Size = new System.Drawing.Size(125, 120);
+            this.ctxMenuTable.Size = new System.Drawing.Size(125, 92);
             // 
             // testeToolStripMenuItem
             // 
@@ -418,25 +437,25 @@
             // pNGToolStripMenuItem
             // 
             this.pNGToolStripMenuItem.Name = "pNGToolStripMenuItem";
-            this.pNGToolStripMenuItem.Size = new System.Drawing.Size(99, 22);
+            this.pNGToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.pNGToolStripMenuItem.Text = "PNG";
             // 
             // bMPToolStripMenuItem
             // 
             this.bMPToolStripMenuItem.Name = "bMPToolStripMenuItem";
-            this.bMPToolStripMenuItem.Size = new System.Drawing.Size(99, 22);
+            this.bMPToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.bMPToolStripMenuItem.Text = "BMP";
+            // 
+            // disableDuplicatePromptToolStripMenuItem
+            // 
+            this.disableDuplicatePromptToolStripMenuItem.Name = "disableDuplicatePromptToolStripMenuItem";
+            this.disableDuplicatePromptToolStripMenuItem.Size = new System.Drawing.Size(241, 22);
+            this.disableDuplicatePromptToolStripMenuItem.Text = "Disable duplicate prompt";
             // 
             // toolStripSeparator7
             // 
             this.toolStripSeparator7.Name = "toolStripSeparator7";
-            this.toolStripSeparator7.Size = new System.Drawing.Size(121, 6);
-            // 
-            // deleteToolStripMenuItem
-            // 
-            this.deleteToolStripMenuItem.Name = "deleteToolStripMenuItem";
-            this.deleteToolStripMenuItem.Size = new System.Drawing.Size(124, 22);
-            this.deleteToolStripMenuItem.Text = "Delete";
+            this.toolStripSeparator7.Size = new System.Drawing.Size(238, 6);
             // 
             // FrmMain
             // 
@@ -483,7 +502,6 @@
         private System.Windows.Forms.DataGridView table;
         private System.Windows.Forms.ToolStripMenuItem textureToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem removeAllToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem removeSelectedToolStripMenuItem;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator2;
         private System.Windows.Forms.ToolStripMenuItem exportAllToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem exportSelectedToolStripMenuItem;
@@ -511,8 +529,11 @@
         private System.Windows.Forms.ToolStripMenuItem convertToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem pNGToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem bMPToolStripMenuItem;
+        private System.Windows.Forms.ToolStripSeparator toolStripSeparator8;
+        private System.Windows.Forms.ToolStripMenuItem convertAndImportBMPToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem creditsToolStripMenuItem;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator7;
-        private System.Windows.Forms.ToolStripMenuItem deleteToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem disableDuplicatePromptToolStripMenuItem;
     }
 }
 

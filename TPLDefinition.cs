@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace RE4_PS2_TPL_Util
+namespace RE4_PS2_TPL_Manager
 {
     public class TPLDefinition
     {
@@ -35,9 +35,14 @@ namespace RE4_PS2_TPL_Util
             public byte unused4;
             public byte unused5;
             public byte endTag;
-
+            // Chunk of data
+            public byte[] header;
             public byte[] pixels;
             public byte[] palette;
+            public byte[] mipmapHeader1;
+            public byte[] mipmapHeader2;
+            public byte[] mipmapPixels1;
+            public byte[] mipmapPixels2;
         }
         public struct MipMap
         {

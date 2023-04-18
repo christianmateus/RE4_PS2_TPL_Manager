@@ -1,7 +1,7 @@
 ﻿using System.Drawing;
 using System.IO;
 
-namespace RE4_PS2_TPL_Util
+namespace RE4_PS2_TPL_Manager
 {
     public class ConverterTGA
     {

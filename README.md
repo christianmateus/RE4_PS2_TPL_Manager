@@ -8,11 +8,11 @@ It is still a work in progress, but many functionalities are already working. Hu
 - Convert all textures to .png and back to .tpl
 - Convert all textures to .tga and back to .tpl
 - Convert all textures to .bmp and back to .tpl
-- Replace textures in 2 clicks
-- Remove textures
-- Add new textures
+- [x] Replace textures in 2 clicks
+- [x] Remove textures
+- [x] Add new textures
 - Mipmap support for adding and removing them 
-- Duplicate textures
+- [x] Duplicate textures
 - Add basic editing features like brightness, contrast, color, sharpness adjustments
-- Compile .tpl from folder
+- [x] Compile .tpl from folder
 - and possible more to come soon...

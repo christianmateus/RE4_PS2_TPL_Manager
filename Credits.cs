@@ -23,5 +23,10 @@ namespace RE4_PS2_TPL_Manager
         {
             Process.Start(new ProcessStartInfo("https://www.youtube.com/@HardRainModder") { UseShellExecute = true });
         }
+
+        private void linkLabel1_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
+        {
+            Process.Start(new ProcessStartInfo("https://imageprocessor.org/imageprocessor/") { UseShellExecute = true });
+        }
     }
 }

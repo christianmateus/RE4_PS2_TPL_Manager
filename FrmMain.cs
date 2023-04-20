@@ -1,4 +1,6 @@
-﻿using Microsoft.WindowsAPICodePack.Dialogs;
+﻿using ImageProcessor;
+using Microsoft.WindowsAPICodePack.Dialogs;
+using RE4_PS2_TPL_Manager.Dialog;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -11,11 +13,11 @@ namespace RE4_PS2_TPL_Manager
 {
     public partial class FrmMain : Form
     {
+
         // Structs
         TPLDefinition.TPL TPL;
         MipMap MipMap;
         TPLDefinition TPLClass = new TPLDefinition();
-
 
         // Global
         OpenFileDialog dialog = new OpenFileDialog();
@@ -25,6 +27,11 @@ namespace RE4_PS2_TPL_Manager
         public FrmMain()
         {
             InitializeComponent();
+        }
+        public FrmMain(string tplFile)
+        {
+            InitializeComponent();
+            FillTable();
         }
         private void UpdateAllOffsets(string tplFilename)
         {
@@ -811,7 +818,7 @@ namespace RE4_PS2_TPL_Manager
 
             return mipmapCount;
         }
-        private void UpdateStatusText(string text)
+        public void UpdateStatusText(string text)
         {
             lblStatusText.Text = text;
             statusStrip1.Invalidate();
@@ -1013,7 +1020,7 @@ namespace RE4_PS2_TPL_Manager
             progressBar.Value = progressBar.Maximum;
             UpdateAllOffsets(filepath);
         }
-        private void Replace()
+        private void Replace(int dialogTextureIndex = 0)
         {
             ReadTexture(filepath, selectedRowIndexGlobal);
 
@@ -1041,18 +1048,32 @@ namespace RE4_PS2_TPL_Manager
 
             if (fileDialog.FileName != "")
             {
+                // Check if tpl contains multiple textures, then opens a dialog for selecting index
+                BinaryReader brTemp = new BinaryReader(File.Open(fileDialog.FileName, FileMode.Open));
+                brTemp.BaseStream.Position += 4;
+                uint tplCount = brTemp.ReadUInt32();
+                brTemp.Close();
+
+                if (tplCount > 1)
+                {
+                    DialogGetIndex dialogGetIndex = new DialogGetIndex();
+                    dialogGetIndex.lblTplCount.Text = "of " + tplCount.ToString();
+                    dialogGetIndex.ShowDialog();
+                    dialogTextureIndex = dialogGetIndex.GetIndex();
+                }
+
                 BinaryReader br2 = new BinaryReader(File.Open(fileDialog.FileName, FileMode.Open));
-                br2.BaseStream.Position = 0x10;
+                br2.BaseStream.Position = 0x10 + (0x30 * dialogTextureIndex);
                 ushort width = br2.ReadUInt16();
                 ushort height = br2.ReadUInt16();
                 ushort bitDepth = br2.ReadUInt16();
 
-                br2.BaseStream.Position = 0x30;
+                br2.BaseStream.Position = 0x30 + (0x30 * dialogTextureIndex);
                 uint pixelsOffset = br2.ReadUInt32();
                 uint paletteOffset = br2.ReadUInt32();
 
                 // Get header
-                br2.BaseStream.Position = 0x10;
+                br2.BaseStream.Position = 0x10 + (0x30 * dialogTextureIndex);
                 byte[] header = br2.ReadBytes(0x30);
                 byte[] pixels = null;
                 byte[] palette = null;
@@ -1095,6 +1116,44 @@ namespace RE4_PS2_TPL_Manager
                 UpdateAllOffsets(filepath);
                 FillTable();
             }
+        }
+        private void Remove()
+        {
+            ReadTexture(filepath, selectedRowIndexGlobal);
+
+            BinaryReader br = new BinaryReader(File.Open(filepath, FileMode.Open));
+
+            // From the beginning to the start of the header
+            byte[] part1 = br.ReadBytes(0x10 + (0x30 * selectedRowIndexGlobal));
+            br.BaseStream.Position += 0x30;
+
+            // After the header to the start of the pixels chunk
+            byte[] part2 = br.ReadBytes((int)(TPL.pixelsOffset - br.BaseStream.Position));
+            br.BaseStream.Position += TPL.pixels.Length;
+
+            // After the pixels chunk to the start of the palette chunk
+            byte[] part3 = br.ReadBytes((int)(TPL.paletteOffset - br.BaseStream.Position));
+            br.BaseStream.Position += TPL.palette.Length;
+
+            // After the palette chunk to the end of the file
+            byte[] part4 = br.ReadBytes((int)(br.BaseStream.Length - br.BaseStream.Position));
+            br.Close();
+
+            // Overwrite .tpl and remove texture
+            BinaryWriter bw = new BinaryWriter(File.Open(filepath, FileMode.Create));
+            bw.Write(part1);
+            bw.Write(part2);
+            bw.Write(part3);
+            bw.Write(part4);
+
+            // Update texture count
+            bw.BaseStream.Position = 0x04;
+            bw.Write(TPL.tplCount - 1);
+            bw.Close();
+
+            UpdateStatusText("Texture removed successfully");
+            UpdateAllOffsets(filepath);
+            //FillTable();
         }
         private void openTPLFileToolStripMenuItem_Click(object sender, EventArgs e)
         {
@@ -1174,50 +1233,59 @@ namespace RE4_PS2_TPL_Manager
         }
         private void extractToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            // Get texture name from selected row, and its index
-            string extractFileName = table.Rows[selectedRowIndexGlobal].Cells[1].Value.ToString();
-            ReadTexture(filepath, selectedRowIndexGlobal);
-
-            // Writing new .tpl file
-            string folderName = Path.GetFileNameWithoutExtension(filepath);
-            Directory.CreateDirectory("Extracted/" + folderName);
-            BinaryWriter bw = new BinaryWriter(File.Open($"Extracted/{folderName}/{extractFileName}", FileMode.Create));
-
-            bw.Write(TPL.magic);
-            bw.Write((uint)0x01);
-            bw.Write(TPL.startOffset);
-            bw.Write(TPL.unused1);
-            bw.Write(TPL.width);
-            bw.Write(TPL.height);
-            bw.Write(TPL.bitDepth);
-            bw.Write(TPL.interlace);
-            bw.Write(TPL.zPriority);
-            bw.Write((short)0x00); // Nulls mipmap count for viewing on GGS
-            bw.Write(TPL.scale);
-            bw.Write(TPL.unused2);
-            bw.Write((uint)(0x00));
-            bw.Write((uint)(0x00));
-            bw.Write((uint)(0x00));
-            bw.Write((uint)(0x00));
-            bw.Write((uint)0x40);
-            if (TPL.bitDepth == 8)
+            try
             {
-                bw.Write((TPL.width * TPL.height) / 2 + 0x40);
+                // Get texture name from selected row, and its index
+                string extractFileName = table.Rows[selectedRowIndexGlobal].Cells[1].Value.ToString();
+                ReadTexture(filepath, selectedRowIndexGlobal);
+
+                // Writing new .tpl file
+                string folderName = Path.GetFileNameWithoutExtension(filepath);
+                Directory.CreateDirectory("Extracted/" + folderName);
+                BinaryWriter bw = new BinaryWriter(File.Open($"Extracted/{folderName}/{extractFileName}", FileMode.Create));
+
+                bw.Write(TPL.magic);
+                bw.Write((uint)0x01);
+                bw.Write(TPL.startOffset);
+                bw.Write(TPL.unused1);
+                bw.Write(TPL.width);
+                bw.Write(TPL.height);
+                bw.Write(TPL.bitDepth);
+                bw.Write(TPL.interlace);
+                bw.Write(TPL.zPriority);
+                bw.Write((short)0x00); // Nulls mipmap count for viewing on GGS
+                bw.Write(TPL.scale);
+                bw.Write(TPL.unused2);
+                bw.Write((uint)(0x00));
+                bw.Write((uint)(0x00));
+                bw.Write((uint)(0x00));
+                bw.Write((uint)(0x00));
+                bw.Write((uint)0x40);
+                if (TPL.bitDepth == 8)
+                {
+                    bw.Write((TPL.width * TPL.height) / 2 + 0x40);
+                }
+                else if (TPL.bitDepth == 9)
+                {
+                    bw.Write((TPL.width * TPL.height) + 0x40);
+                }
+                bw.Write(TPL.unused3);
+                bw.Write(TPL.config1);
+                bw.Write(TPL.config2);
+                bw.Write(TPL.config3);
+                bw.Write(TPL.unused4);
+                bw.Write(TPL.unused5);
+                bw.Write(TPL.endTag);
+                bw.Write(TPL.pixels);
+                bw.Write(TPL.palette);
+                bw.Close();
+
+                UpdateStatusText("Texture extacted successfully");
             }
-            else if (TPL.bitDepth == 9)
+            catch (Exception exc)
             {
-                bw.Write((TPL.width * TPL.height) + 0x40);
+                MessageBox.Show(exc.Message);
             }
-            bw.Write(TPL.unused3);
-            bw.Write(TPL.config1);
-            bw.Write(TPL.config2);
-            bw.Write(TPL.config3);
-            bw.Write(TPL.unused4);
-            bw.Write(TPL.unused5);
-            bw.Write(TPL.endTag);
-            bw.Write(TPL.pixels);
-            bw.Write(TPL.palette);
-            bw.Close();
         }
         private void replaceToolStripMenuItem_Click(object sender, EventArgs e)
         {
@@ -1257,6 +1325,41 @@ namespace RE4_PS2_TPL_Manager
                 }
             }
         }
+        private void removeToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                if (Convert.ToInt16(table.Rows[selectedRowIndexGlobal].Cells[7].Value.ToString()) > 0)
+                {
+                    MessageBox.Show("You must remove mipmaps first, before removing this texture.", "Error: mipmaps present",
+                        MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+                }
+                else
+                {
+                    Remove();
+                }
+            }
+            catch (Exception exc)
+            {
+                MessageBox.Show(exc.Message);
+            }
+        }
+        private void button1_Click(object sender, EventArgs e)
+        {
+            ImageFactory imageFactory = new ImageFactory();
+            imageFactory.Load($"Converted/em/0.bmp");
+            imageFactory.Contrast(28);
+            imageFactory.Save($"Converted/em/0a.bmp");
+        }
+        private void convertAndImportBMPToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            OpenFileDialog openFileDialog = new OpenFileDialog();
+            openFileDialog.Filter = "BMP Files (*.bmp)|*.bmp";
+            openFileDialog.Multiselect = true;
+            openFileDialog.ShowDialog();
 
+            ConverterBMP converterBMP = new ConverterBMP();
+            converterBMP.BMPtoTPL(openFileDialog.FileNames);
+        }
     }
 }

@@ -151,11 +151,23 @@ namespace RE4_PS2_TPL_Manager
                     bitmap.RotateFlip(RotateFlipType.RotateNoneFlipY);
                     if (fileType == "BMP")
                     {
-                        bitmap.Save("Converted/" + folderName + "/" + tplNumber + ".bmp", System.Drawing.Imaging.ImageFormat.Bmp);
+                        try
+                        {
+                            bitmap.Save("Converted/" + folderName + "/" + tplNumber + ".bmp", System.Drawing.Imaging.ImageFormat.Bmp);
+                        }
+                        catch (Exception)
+                        {
+                        }
                     }
                     else if (fileType == "PNG")
                     {
-                        bitmap.Save("Converted/" + folderName + "/" + tplNumber + ".png", System.Drawing.Imaging.ImageFormat.Png);
+                        try
+                        {
+                            bitmap.Save("Converted/" + folderName + "/" + tplNumber + ".png", System.Drawing.Imaging.ImageFormat.Png);
+                        }
+                        catch (Exception)
+                        {
+                        }
                     }
                 }
                 else if (tpl.bitDepth == 0x8 && (tpl.interlace == 0x2 || tpl.interlace == 0x3))
@@ -287,11 +299,23 @@ namespace RE4_PS2_TPL_Manager
                     bitmap.RotateFlip(RotateFlipType.RotateNoneFlipY);
                     if (fileType == "BMP")
                     {
-                        bitmap.Save("Converted/" + folderName + "/" + tplNumber + ".bmp", System.Drawing.Imaging.ImageFormat.Bmp);
+                        try
+                        {
+                            bitmap.Save("Converted/" + folderName + "/" + tplNumber + ".bmp", System.Drawing.Imaging.ImageFormat.Bmp);
+                        }
+                        catch (Exception)
+                        {
+                        }
                     }
                     else if (fileType == "PNG")
                     {
-                        bitmap.Save("Converted/" + folderName + "/" + tplNumber + ".png", System.Drawing.Imaging.ImageFormat.Png);
+                        try
+                        {
+                            bitmap.Save("Converted/" + folderName + "/" + tplNumber + ".png", System.Drawing.Imaging.ImageFormat.Png);
+                        }
+                        catch (Exception)
+                        {
+                        }
                     }
                 }
                 else if (tpl.bitDepth == 0x9 && (tpl.interlace == 0x0 || tpl.interlace == 0x1))
@@ -367,16 +391,27 @@ namespace RE4_PS2_TPL_Manager
                     bitmap.RotateFlip(RotateFlipType.RotateNoneFlipY);
                     if (fileType == "BMP")
                     {
-                        bitmap.Save("Converted/" + folderName + "/" + tplNumber + ".bmp", System.Drawing.Imaging.ImageFormat.Bmp);
+                        try
+                        {
+                            bitmap.Save("Converted/" + folderName + "/" + tplNumber + ".bmp", System.Drawing.Imaging.ImageFormat.Bmp);
+                        }
+                        catch (Exception)
+                        {
+                        }
                     }
                     else if (fileType == "PNG")
                     {
-                        bitmap.Save("Converted/" + folderName + "/" + tplNumber + ".png", System.Drawing.Imaging.ImageFormat.Png);
+                        try
+                        {
+                            bitmap.Save("Converted/" + folderName + "/" + tplNumber + ".png", System.Drawing.Imaging.ImageFormat.Png);
+                        }
+                        catch (Exception)
+                        {
+                        }
                     }
                 }
                 else if (tpl.bitDepth == 0x9 && (tpl.interlace == 0x2 || tpl.interlace == 0x3))
                 {
-
                     int indicesbytesCount = (tpl.height * tpl.width);
 
                     br.BaseStream.Position = tpl.pixelsOffset;
@@ -469,16 +504,27 @@ namespace RE4_PS2_TPL_Manager
                     bitmap.RotateFlip(RotateFlipType.RotateNoneFlipY);
                     if (fileType == "BMP")
                     {
-                        bitmap.Save("Converted/" + folderName + "/" + tplNumber + ".bmp", System.Drawing.Imaging.ImageFormat.Bmp);
+                        try
+                        {
+                            bitmap.Save("Converted/" + folderName + "/" + tplNumber + ".bmp", System.Drawing.Imaging.ImageFormat.Bmp);
+                        }
+                        catch (Exception)
+                        {
+                        }
                     }
                     else if (fileType == "PNG")
                     {
-                        bitmap.Save("Converted/" + folderName + "/" + tplNumber + ".png", System.Drawing.Imaging.ImageFormat.Png);
+                        try
+                        {
+                            bitmap.Save("Converted/" + folderName + "/" + tplNumber + ".png", System.Drawing.Imaging.ImageFormat.Png);
+                        }
+                        catch (Exception)
+                        {
+                        }
                     }
                 }
                 else if (tpl.bitDepth == 0x6 && (tpl.interlace == 0x0 || tpl.interlace == 0x1))
                 {
-
                     int bytesCount = (tpl.height * tpl.width) * 4;
 
                     br.BaseStream.Position = tpl.pixelsOffset;
@@ -518,11 +564,24 @@ namespace RE4_PS2_TPL_Manager
                     bitmap.RotateFlip(RotateFlipType.RotateNoneFlipY);
                     if (fileType == "BMP")
                     {
-                        bitmap.Save("Converted/" + folderName + "/" + tplNumber + ".bmp", System.Drawing.Imaging.ImageFormat.Bmp);
+                        try
+                        {
+                            bitmap.Save("Converted/" + folderName + "/" + tplNumber + ".bmp", System.Drawing.Imaging.ImageFormat.Bmp);
+                        }
+                        catch (Exception)
+                        {
+                        }
                     }
                     else if (fileType == "PNG")
                     {
-                        bitmap.Save("Converted/" + folderName + "/" + tplNumber + ".png", System.Drawing.Imaging.ImageFormat.Png);
+                        try
+                        {
+                            bitmap.Save("Converted/" + folderName + "/" + tplNumber + ".png", System.Drawing.Imaging.ImageFormat.Png);
+                        }
+                        catch (Exception)
+                        {
+                        }
+
                     }
                 }
                 else
@@ -805,143 +864,223 @@ namespace RE4_PS2_TPL_Manager
             br.Close();
         }
 
-        public void BMPtoTPL(string tplFile)
+        public void BMPtoTPL(string[] tplFile)
         {
-            BinaryReader br = new BinaryReader(File.Open(tplFile, FileMode.Open));
-            TPL tpl;
-
-            tpl.magic = 0x00001000;
-            tpl.tplCount = 1;
-            tpl.startOffset = 0x10;
-            tpl.unused1 = 0;
-
-            br.BaseStream.Position = 0x12;
-            tpl.width = br.ReadUInt16();
-            tpl.height = br.ReadUInt16();
-
-            tpl.bitDepth = br.ReadUInt16();
-            if (tpl.bitDepth == 4) { tpl.bitDepth = 8; }
-            else if (tpl.bitDepth == 8) { tpl.bitDepth = 9; }
-            else { Console.WriteLine("Bit depth not supported, images must be 4-bit or 8-bit"); return; }
-
-            tpl.interlace = 0;
-            tpl.zPriority = 256;
-            tpl.mipmapCount = 0;
-            tpl.scale = (ushort)(tpl.width * 4);
-            tpl.unused2 = 0;
-
-            tpl.mipmapOffset1 = 0;
-            tpl.mipmapOffset2 = 0;
-            tpl.unk1 = 0;
-            tpl.unk2 = 0;
-
-            tpl.pixelsOffset = 0x40;
-            tpl.paletteOffset = 0;
-            tpl.unused3 = 0;
-            tpl.config1 = 0; // This is either 00, 40 or 80
-            tpl.config2 = 0;
-
-            // Getting bit depth for tpl config
-            if (tpl.bitDepth == 8)
+            try
             {
-                tpl.config2 = 0x40; // This byte is usually 0x40 for 4-bit images
-                tpl.paletteOffset = (uint)(tpl.width * tpl.height / 2 + 0x40);
-            }
-            else if (tpl.bitDepth == 9)
-            {
-                tpl.config2 = 0x30; // This byte is usually 0x30 for 8-bit images
-                tpl.paletteOffset = (uint)(tpl.width * tpl.height + 0x40);
-            }
-
-            tpl.config3 = 0xDD; // This byte controls the way the texture is applied to the model, 0xDD solves for ITM and SMD
-            tpl.unused4 = 0;
-            tpl.unused5 = 0;
-            tpl.endTag = 0x40;
-
-            // Get pixels bytes
-            br.BaseStream.Position = 0x0A;
-            uint bmpPixelsOffset = br.ReadUInt32();
-            br.BaseStream.Position = bmpPixelsOffset;
-            byte[] bmpPixels = br.ReadBytes(tpl.width * tpl.height);
-
-            // Get palette bytes
-            br.BaseStream.Position = 0x2E;
-            uint bmpPaletteCount = br.ReadUInt32();
-            br.BaseStream.Position = 0x36;
-            byte[] bmpPalette = br.ReadBytes((int)bmpPaletteCount * 4);
-
-            //-------------------------------
-            // WRITING DATA
-            //-------------------------------
-            BinaryWriter bw = new BinaryWriter(File.Open("tplteste.tpl", FileMode.Create));
-
-            Console.WriteLine("Writing TPL header");
-            bw.Write(tpl.magic);
-            bw.Write(tpl.tplCount);
-            bw.Write(tpl.startOffset);
-            bw.Write(tpl.unused1);
-            bw.Write(tpl.width);
-            bw.Write(tpl.height);
-            bw.Write(tpl.bitDepth);
-            bw.Write(tpl.interlace);
-            bw.Write(tpl.zPriority);
-            bw.Write(tpl.mipmapCount);
-            bw.Write(tpl.scale);
-            bw.Write(tpl.unused2);
-            bw.Write(tpl.mipmapOffset1);
-            bw.Write(tpl.mipmapOffset2);
-            bw.Write(tpl.unk1);
-            bw.Write(tpl.unk2);
-            bw.Write(tpl.pixelsOffset);
-            bw.Write(tpl.paletteOffset);
-            bw.Write(tpl.unused3);
-            bw.Write(tpl.config1);
-            bw.Write(tpl.config2);
-            bw.Write(tpl.config3);
-            bw.Write(tpl.unused4);
-            bw.Write(tpl.unused5);
-            bw.Write(tpl.endTag);
-
-            Console.WriteLine("Writing TPL pixels");
-            // Writing pixels
-            for (int i = 0; i < bmpPixels.Length; i++)
-            {
-                bw.Write(bmpPixels[i]);
-            }
-
-            Console.WriteLine("Writing TPL palette");
-            // Writing palette
-            if (tpl.bitDepth == 8)
-            {
-                Console.WriteLine("4 bit texture");
-                for (int i = 0; i < bmpPalette.Length; i++)
+                for (int i = 0; i < tplFile.Length; i++)
                 {
-                    if (i == 0x20)
+                    BinaryReader br = new BinaryReader(File.Open(tplFile[i], FileMode.Open));
+                    TPL tpl;
+
+                    tpl.magic = 0x00001000;
+                    tpl.tplCount = 1;
+                    tpl.startOffset = 0x10;
+                    tpl.unused1 = 0;
+
+                    br.BaseStream.Position = 0x12;
+                    tpl.width = (ushort)br.ReadUInt32();
+                    tpl.height = (ushort)br.ReadUInt32();
+
+                    br.BaseStream.Position = 0x1C;
+                    tpl.bitDepth = br.ReadUInt16();
+                    if (tpl.bitDepth == 4) { tpl.bitDepth = 8; }
+                    else if (tpl.bitDepth == 8) { tpl.bitDepth = 9; }
+                    else
                     {
-                        for (int padding = 0; padding < 0x08; padding++)
+                        MessageBox.Show($"Bit depth {tpl.bitDepth}-bit not supported, images must be 4-bit (16 colors) or 8-bit (256 colors)",
+                        "Bit Depth Error", MessageBoxButtons.OK, MessageBoxIcon.Exclamation); br.Close(); continue;
+                    }
+
+                    tpl.interlace = 0;
+                    tpl.zPriority = 256;
+                    tpl.mipmapCount = 0;
+                    if (tpl.width > 128)
+                    {
+                        tpl.scale = (ushort)(tpl.width * 8);
+                    }
+                    else
+                    {
+                        tpl.scale = (ushort)(tpl.width * 4);
+                    }
+                    tpl.unused2 = 0;
+
+                    tpl.mipmapOffset1 = 0;
+                    tpl.mipmapOffset2 = 0;
+                    tpl.unk1 = 0;
+                    tpl.unk2 = 0;
+
+                    tpl.pixelsOffset = 0x40;
+                    tpl.paletteOffset = 0;
+                    tpl.unused3 = 0;
+
+                    // Render config parameters
+                    if (tpl.width > 128)
+                    {
+                        tpl.config1 = 0x00; // This byte is 00 if width is > 128px
+                    }
+                    else
+                    {
+                        tpl.config1 = 0x80; // This byte is 80 if width is < 256px
+                    }
+
+                    // Getting bit depth for tpl config
+                    if (tpl.bitDepth == 8)
+                    {
+                        // Render config 2 is splitted in two nibbles,
+                        // first nibble is related to bit depth
+                        // second nibble is related to width
+                        if (tpl.config1 == 00)
                         {
-                            bw.Write((UInt32)0);
+                            tpl.config2 = (byte)(0x40 + BitConverter.GetBytes(tpl.width)[1]);
+                        }
+                        else
+                        {
+                            tpl.config2 = 0x40;
+                        }
+                        tpl.paletteOffset = (uint)(tpl.width * tpl.height / 2 + 0x40);
+                    }
+                    else if (tpl.bitDepth == 9)
+                    {
+                        if (tpl.config1 == 00)
+                        {
+                            tpl.config2 = (byte)(0x30 + BitConverter.GetBytes(tpl.width)[1]);
+                        }
+                        else
+                        {
+                            tpl.config2 = 0x30;
+                        }
+                        tpl.paletteOffset = (uint)(tpl.width * tpl.height + 0x40);
+                    }
+                    else
+                    {
+                        tpl.config2 = 0x00;
+                        tpl.paletteOffset = 0x00;
+                    }
+
+                    // The last render config increases accordingly to width & height parameters
+                    // currently only working with power of 2 type resolutions, eg. 8,16,32,64,128,256,512,1024
+                    // Documentation in portuguese: https://curt.link/g2NpZ2
+                    ushort defaultValue = 1229;
+                    for (int m = 0; m < 8; m++)
+                    {
+                        if (tpl.width != Math.Pow(2, 3 + m))
+                        {
+                            defaultValue += 4;
+                        }
+                        else
+                        {
+                            break;
                         }
                     }
-                    bw.Write(bmpPalette[i]);
+                    for (int m = 0; m < 8; m++)
+                    {
+                        if (tpl.height != Math.Pow(2, 3 + m))
+                        {
+                            defaultValue += 0x40;
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
+                    tpl.config3 = defaultValue; // This byte controls the way the texture is applied to the model, 0xDD solves for ITM and SMD
+                    tpl.unused4 = 0;
+                    tpl.unused5 = 0;
+                    tpl.endTag = 0x40;
+
+                    // Get pixels bytes
+                    br.BaseStream.Position = 0x0A;
+                    uint bmpPixelsOffset = br.ReadUInt32();
+                    br.BaseStream.Position = bmpPixelsOffset;
+                    byte[] bmpPixels = br.ReadBytes(tpl.width * tpl.height);
+
+                    // Get palette bytes
+                    br.BaseStream.Position = 0x2E;
+                    uint bmpPaletteCount = br.ReadUInt32();
+                    br.BaseStream.Position = 0x36;
+                    byte[] bmpPalette = br.ReadBytes((int)bmpPaletteCount * 4);
+                    br.Close();
+
+                    //-------------------------------
+                    // WRITING DATA
+                    //-------------------------------
+                    BinaryWriter bw = new BinaryWriter(File.Open($"{Path.GetFileNameWithoutExtension(tplFile[i])}.tpl", FileMode.Create));
+
+                    Console.WriteLine("Writing TPL header");
+                    bw.Write(tpl.magic);
+                    bw.Write(tpl.tplCount);
+                    bw.Write(tpl.startOffset);
+                    bw.Write(tpl.unused1);
+                    bw.Write(tpl.width);
+                    bw.Write(tpl.height);
+                    bw.Write(tpl.bitDepth);
+                    bw.Write(tpl.interlace);
+                    bw.Write(tpl.zPriority);
+                    bw.Write(tpl.mipmapCount);
+                    bw.Write(tpl.scale);
+                    bw.Write(tpl.unused2);
+                    bw.Write(tpl.mipmapOffset1);
+                    bw.Write(tpl.mipmapOffset2);
+                    bw.Write(tpl.unk1);
+                    bw.Write(tpl.unk2);
+                    bw.Write(tpl.pixelsOffset);
+                    bw.Write(tpl.paletteOffset);
+                    bw.Write(tpl.unused3);
+                    bw.Write(tpl.config1);
+                    bw.Write(tpl.config2);
+                    bw.Write(tpl.config3);
+                    bw.Write(tpl.unused4);
+                    bw.Write(tpl.unused5);
+                    bw.Write(tpl.endTag);
+
+                    Console.WriteLine("Writing TPL pixels");
+                    // Writing pixels
+                    bw.Write(bmpPixels);
+
+                    Console.WriteLine("Writing TPL palette");
+                    // Writing palette
+                    if (tpl.bitDepth == 8)
+                    {
+                        Console.WriteLine("4 bit texture");
+                        for (int p = 0; p < bmpPalette.Length; p++)
+                        {
+                            if (p == 0x20)
+                            {
+                                for (int padding = 0; padding < 0x08; padding++)
+                                {
+                                    bw.Write((uint)0);
+                                }
+                            }
+                            bw.Write(bmpPalette[p]);
+                        }
+                        for (int padding = 0; padding < 0x08; padding++)
+                        {
+                            bw.Write((uint)0);
+                        }
+                    }
+                    else if (tpl.bitDepth == 9)
+                    {
+                        Console.WriteLine("8 bit texture");
+                        for (int p = 0; p < bmpPalette.Length; p += 4)
+                        {
+                            bw.Write(bmpPalette[p + 2]); // B
+                            bw.Write(bmpPalette[p + 1]); // G
+                            bw.Write(bmpPalette[p]); // R
+                            bw.Write(bmpPalette[p + 3]); // A
+                        }
+                    }
+                    bw.Close();
                 }
-                for (int padding = 0; padding < 0x08; padding++)
-                {
-                    bw.Write((UInt32)0);
-                }
+                MessageBox.Show("Files converted successfully, check on the root of folder 'Converted'.$",
+                    $"Success on converting {tplFile.Length} textures",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
-            else if (tpl.bitDepth == 9)
+            catch (Exception)
             {
-                Console.WriteLine("8 bit texture");
-                for (int i = 0; i < bmpPalette.Length; i += 4)
-                {
-                    bw.Write(bmpPalette[i + 2]); // B
-                    bw.Write(bmpPalette[i + 1]); // G
-                    bw.Write(bmpPalette[i]); // R
-                    bw.Write(bmpPalette[i + 3]); // A
-                }
+
+                throw;
             }
-            bw.Close();
         }
     }
 }

@@ -1,9 +1,13 @@
 ﻿using ImageProcessor;
 using Microsoft.WindowsAPICodePack.Dialogs;
 using RE4_PS2_TPL_Manager.Dialog;
+using SimplePaletteQuantizer.Helpers;
+using SimplePaletteQuantizer.Quantizers;
+using SimplePaletteQuantizer.Quantizers.DistinctSelection;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
@@ -13,7 +17,6 @@ namespace RE4_PS2_TPL_Manager
 {
     public partial class FrmMain : Form
     {
-
         // Structs
         TPLDefinition.TPL TPL;
         MipMap MipMap;
@@ -27,6 +30,21 @@ namespace RE4_PS2_TPL_Manager
         public FrmMain()
         {
             InitializeComponent();
+            ColorSlider.ColorSlider slider = new ColorSlider.ColorSlider();
+            slider.Location = new Point(50, 50);
+            slider.Maximum = 100;
+            slider.Minimum = -100;
+
+            panelEditor.Controls.Add(slider);
+            panel4.Location = new Point(panelEditor.Width / 2 - panel4.Width / 2);
+
+            // Directory used for temporary creating and deleting files
+            string path = ".temp";
+            if (!Directory.Exists(path))
+            {
+                DirectoryInfo di = Directory.CreateDirectory(path);
+                di.Attributes = FileAttributes.Directory | FileAttributes.Hidden;
+            }
         }
         public FrmMain(string tplFile)
         {
@@ -121,7 +139,7 @@ namespace RE4_PS2_TPL_Manager
             TPL.tplCount = br.ReadUInt32();
             br.Close();
 
-            UpdateStatusText("Extracting {TPL.tplCount} textures...");
+            UpdateStatusText($"Extracting {TPL.tplCount} textures...");
 
             for (int i = 0; i < TPL.tplCount; i++)
             {
@@ -900,7 +918,14 @@ namespace RE4_PS2_TPL_Manager
 
                 // Generating image thumbnail
                 Image thumbnail;
-                thumbnail = Image.FromFile("Converted/" + folderName + "/" + i + ".bmp");
+                if (TPL.bitDepth == 8)
+                {
+                    thumbnail = Image.FromFile(".temp/" + folderName + "/" + i + "_16.bmp");
+                }
+                else
+                {
+                    thumbnail = Image.FromFile(".temp/" + folderName + "/" + i + "_256.bmp");
+                }
 
                 // Create combobox of bit depth and interlace modes
                 DataGridViewComboBoxCell cbBitDepth = new DataGridViewComboBoxCell();
@@ -1020,11 +1045,11 @@ namespace RE4_PS2_TPL_Manager
             progressBar.Value = progressBar.Maximum;
             UpdateAllOffsets(filepath);
         }
-        private void Replace(int dialogTextureIndex = 0)
+        private void Replace(string tplFile, string replacerTpl = "", int dialogTextureIndex = 0, bool isTemp = false)
         {
-            ReadTexture(filepath, selectedRowIndexGlobal);
+            ReadTexture(tplFile, selectedRowIndexGlobal);
 
-            BinaryReader br = new BinaryReader(File.Open(filepath, FileMode.Open));
+            BinaryReader br = new BinaryReader(File.Open(tplFile, FileMode.Open));
 
             // From the beginning to the start of the header
             byte[] part1 = br.ReadBytes(0x10 + (0x30 * selectedRowIndexGlobal));
@@ -1044,12 +1069,17 @@ namespace RE4_PS2_TPL_Manager
 
             OpenFileDialog fileDialog = new OpenFileDialog();
             fileDialog.Filter = "RE4 PS2 TPL Files (*.tpl)|*.tpl";
-            fileDialog.ShowDialog();
 
-            if (fileDialog.FileName != "")
+            if (!isTemp)
+            {
+                fileDialog.ShowDialog();
+                replacerTpl = fileDialog.FileName;
+            }
+
+            if (replacerTpl != "")
             {
                 // Check if tpl contains multiple textures, then opens a dialog for selecting index
-                BinaryReader brTemp = new BinaryReader(File.Open(fileDialog.FileName, FileMode.Open));
+                BinaryReader brTemp = new BinaryReader(File.Open(replacerTpl, FileMode.Open));
                 brTemp.BaseStream.Position += 4;
                 uint tplCount = brTemp.ReadUInt32();
                 brTemp.Close();
@@ -1062,7 +1092,7 @@ namespace RE4_PS2_TPL_Manager
                     dialogTextureIndex = dialogGetIndex.GetIndex();
                 }
 
-                BinaryReader br2 = new BinaryReader(File.Open(fileDialog.FileName, FileMode.Open));
+                BinaryReader br2 = new BinaryReader(File.Open(replacerTpl, FileMode.Open));
                 br2.BaseStream.Position = 0x10 + (0x30 * dialogTextureIndex);
                 ushort width = br2.ReadUInt16();
                 ushort height = br2.ReadUInt16();
@@ -1102,7 +1132,7 @@ namespace RE4_PS2_TPL_Manager
                 br2.Close();
 
                 // Overwrite .tpl and replace texture
-                BinaryWriter bw = new BinaryWriter(File.Open(filepath, FileMode.Create));
+                BinaryWriter bw = new BinaryWriter(File.Open(tplFile, FileMode.Create));
                 bw.Write(part1);
                 bw.Write(header);
                 bw.Write(part2);
@@ -1113,7 +1143,7 @@ namespace RE4_PS2_TPL_Manager
                 bw.Close();
 
                 UpdateStatusText("Texture replaced successfully");
-                UpdateAllOffsets(filepath);
+                UpdateAllOffsets(tplFile);
                 FillTable();
             }
         }
@@ -1155,11 +1185,26 @@ namespace RE4_PS2_TPL_Manager
             UpdateAllOffsets(filepath);
             //FillTable();
         }
+        private void btnOpenFile_Click(object sender, EventArgs e)
+        {
+            dialog.Filter = "RE4 PS2 TPL Files (*.tpl)|*.tpl";
+            dialog.ShowDialog();
+            filepath = dialog.FileName;
+            btnOpenFile.Dispose();
+            btnCreateNewFile.Dispose();
+            if (filepath != "")
+            {
+                this.Text = "RE4 PS2 TPL Manager - " + Path.GetFileName(filepath);
+                FillTable();
+            }
+        }
         private void openTPLFileToolStripMenuItem_Click(object sender, EventArgs e)
         {
             dialog.Filter = "RE4 PS2 TPL Files (*.tpl)|*.tpl";
             dialog.ShowDialog();
             filepath = dialog.FileName;
+            btnCreateNewFile.Dispose();
+            btnOpenFile.Dispose();
             if (filepath != "")
             {
                 this.Text = "RE4 PS2 TPL Manager - " + Path.GetFileName(filepath);
@@ -1209,7 +1254,6 @@ namespace RE4_PS2_TPL_Manager
                 table.Columns[9].Visible = false;
                 table.Columns[10].Visible = false;
                 table.Columns[11].Visible = false;
-                table.Columns[12].Visible = false;
             }
         }
         private void table_CellClick(object sender, DataGridViewCellEventArgs e)
@@ -1217,7 +1261,8 @@ namespace RE4_PS2_TPL_Manager
             if (e.RowIndex >= 0)
             {
                 string folderName = Path.GetFileNameWithoutExtension(filepath);
-                texturePreview.Image = Image.FromFile("Converted/" + folderName + "/" + e.RowIndex + ".bmp");
+                //texturePreview.Image = Image.FromFile("Converted/" + folderName + "/" + e.RowIndex + ".bmp");
+                texturePreview.Image = (Bitmap)(table.Rows[e.RowIndex].Cells[0].Value);
             }
         }
         private void table_CellMouseDown(object sender, DataGridViewCellMouseEventArgs e)
@@ -1225,10 +1270,10 @@ namespace RE4_PS2_TPL_Manager
             if (e.Button == MouseButtons.Right)
             {
                 ctxMenuTable.Show(Cursor.Position);
-                if (e.RowIndex >= 0)
-                {
-                    selectedRowIndexGlobal = e.RowIndex;
-                }
+            }
+            if (e.RowIndex >= 0)
+            {
+                selectedRowIndexGlobal = e.RowIndex;
             }
         }
         private void extractToolStripMenuItem_Click(object sender, EventArgs e)
@@ -1289,7 +1334,7 @@ namespace RE4_PS2_TPL_Manager
         }
         private void replaceToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            Replace();
+            Replace(filepath);
         }
         private void duplicateToolStripMenuItem_Click(object sender, EventArgs e)
         {
@@ -1347,9 +1392,14 @@ namespace RE4_PS2_TPL_Manager
         private void button1_Click(object sender, EventArgs e)
         {
             ImageFactory imageFactory = new ImageFactory();
-            imageFactory.Load($"Converted/em/0.bmp");
-            imageFactory.Contrast(28);
-            imageFactory.Save($"Converted/em/0a.bmp");
+            imageFactory.Load(texturePreview.Image);
+            imageFactory.GaussianSharpen(10);
+
+            texturePreview.Image = imageFactory.Image;
+            table.Rows[selectedRowIndexGlobal].Cells[0].Value = imageFactory.Image;
+
+            //imageFactory.Save($"Converted/em/0a.bmp");
+
         }
         private void convertAndImportBMPToolStripMenuItem_Click(object sender, EventArgs e)
         {
@@ -1360,6 +1410,39 @@ namespace RE4_PS2_TPL_Manager
 
             ConverterBMP converterBMP = new ConverterBMP();
             converterBMP.BMPtoTPL(openFileDialog.FileNames);
+        }
+
+        private void FrmMain_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            Directory.Delete(".temp", true);
+            Console.WriteLine();
+        }
+
+        private void button4_Click(object sender, EventArgs e)
+        {
+            string folderName = Path.GetFileNameWithoutExtension(filepath);
+
+            IColorQuantizer colorQuantizer = new DistinctSelectionQuantizer();
+            Image target = ImageBuffer.QuantizeImage(texturePreview.Image, colorQuantizer, 256, 4);
+            target.Save(".temp/" + folderName + "/" + selectedRowIndexGlobal + ".bmp", ImageFormat.Bmp);
+
+        }
+
+        private void increaseColorDepthToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (table.Rows[selectedRowIndexGlobal].Cells[4].Value.ToString() != "8-bit")
+            {
+                string folderName = Path.GetFileNameWithoutExtension(filepath);
+
+                ConverterBMP converterBMP = new ConverterBMP();
+                converterBMP.BMPtoTPL(new string[] { $".temp/{folderName}/{selectedRowIndexGlobal}_256.bmp" }, true);
+                Replace(filepath, $".temp/0_256.tpl", 0, true);
+            }
+            else
+            {
+                MessageBox.Show("Texture is already at maximum colors allowed (256).", "Cannot increase bit depth",
+                    MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+            }
         }
     }
 }

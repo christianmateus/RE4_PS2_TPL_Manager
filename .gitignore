@@ -9,6 +9,7 @@
 *.tpl
 *.bmp
 *.png
+/.temp
 
 # User-specific files
 *.rsuser

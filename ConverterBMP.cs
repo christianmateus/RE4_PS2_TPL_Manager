@@ -1,5 +1,9 @@
-﻿using System;
+﻿using SimplePaletteQuantizer.Helpers;
+using SimplePaletteQuantizer.Quantizers;
+using SimplePaletteQuantizer.Quantizers.Octree;
+using System;
 using System.Drawing;
+using System.Drawing.Imaging;
 using System.IO;
 using System.Windows.Forms;
 
@@ -60,7 +64,7 @@ namespace RE4_PS2_TPL_Manager
 
     public class ConverterBMP
     {
-        public void TPLtoBMP(string tplFile, string fileType)
+        public void TPLtoBMP(string tplFile, string fileType, int bitDepth = 256)
         {
             BinaryReader br = new BinaryReader(File.Open(tplFile, FileMode.Open));
 
@@ -68,6 +72,7 @@ namespace RE4_PS2_TPL_Manager
             br.BaseStream.Position = 0x04;
             byte tplCount = br.ReadByte();
             string folderName = Path.GetFileNameWithoutExtension(tplFile);
+            Directory.CreateDirectory(".temp/" + folderName);
             Directory.CreateDirectory("Converted/" + folderName);
 
             // Iterates through each texture inside .tpl file
@@ -153,7 +158,11 @@ namespace RE4_PS2_TPL_Manager
                     {
                         try
                         {
-                            bitmap.Save("Converted/" + folderName + "/" + tplNumber + ".bmp", System.Drawing.Imaging.ImageFormat.Bmp);
+                            IColorQuantizer colorQuantizer = new OctreeQuantizer();
+                            Image target256 = ImageBuffer.QuantizeImage(bitmap, colorQuantizer, 256, 4);
+                            target256.Save(".temp/" + folderName + "/" + tplNumber + "_256.bmp", ImageFormat.Bmp);
+                            Image target16 = ImageBuffer.QuantizeImage(bitmap, colorQuantizer, 16, 4);
+                            target16.Save(".temp/" + folderName + "/" + tplNumber + "_16.bmp", ImageFormat.Bmp);
                         }
                         catch (Exception)
                         {
@@ -163,7 +172,9 @@ namespace RE4_PS2_TPL_Manager
                     {
                         try
                         {
-                            bitmap.Save("Converted/" + folderName + "/" + tplNumber + ".png", System.Drawing.Imaging.ImageFormat.Png);
+                            IColorQuantizer colorQuantizer = new OctreeQuantizer();
+                            Image target = ImageBuffer.QuantizeImage(bitmap, colorQuantizer, bitDepth, 4);
+                            target.Save("Converted/" + folderName + "/" + tplNumber + ".png", ImageFormat.Png);
                         }
                         catch (Exception)
                         {
@@ -301,7 +312,11 @@ namespace RE4_PS2_TPL_Manager
                     {
                         try
                         {
-                            bitmap.Save("Converted/" + folderName + "/" + tplNumber + ".bmp", System.Drawing.Imaging.ImageFormat.Bmp);
+                            IColorQuantizer colorQuantizer = new OctreeQuantizer();
+                            Image target256 = ImageBuffer.QuantizeImage(bitmap, colorQuantizer, 256, 4);
+                            target256.Save(".temp/" + folderName + "/" + tplNumber + "_256.bmp", ImageFormat.Bmp);
+                            Image target16 = ImageBuffer.QuantizeImage(bitmap, colorQuantizer, 16, 4);
+                            target16.Save(".temp/" + folderName + "/" + tplNumber + "_16.bmp", ImageFormat.Bmp);
                         }
                         catch (Exception)
                         {
@@ -311,7 +326,10 @@ namespace RE4_PS2_TPL_Manager
                     {
                         try
                         {
-                            bitmap.Save("Converted/" + folderName + "/" + tplNumber + ".png", System.Drawing.Imaging.ImageFormat.Png);
+                            IColorQuantizer colorQuantizer = new OctreeQuantizer();
+                            Image target = ImageBuffer.QuantizeImage(bitmap, colorQuantizer, 256, 4);
+                            target.Save("Converted/" + folderName + "/" + tplNumber + ".png", ImageFormat.Png);
+                            // bitmap.Save("Converted/" + folderName + "/" + tplNumber + ".png", ImageFormat.Png);
                         }
                         catch (Exception)
                         {
@@ -393,7 +411,11 @@ namespace RE4_PS2_TPL_Manager
                     {
                         try
                         {
-                            bitmap.Save("Converted/" + folderName + "/" + tplNumber + ".bmp", System.Drawing.Imaging.ImageFormat.Bmp);
+                            IColorQuantizer colorQuantizer = new OctreeQuantizer();
+                            Image target256 = ImageBuffer.QuantizeImage(bitmap, colorQuantizer, 256, 4);
+                            target256.Save(".temp/" + folderName + "/" + tplNumber + "_256.bmp", ImageFormat.Bmp);
+                            Image target16 = ImageBuffer.QuantizeImage(bitmap, colorQuantizer, 16, 4);
+                            target16.Save(".temp/" + folderName + "/" + tplNumber + "_16.bmp", ImageFormat.Bmp);
                         }
                         catch (Exception)
                         {
@@ -403,7 +425,10 @@ namespace RE4_PS2_TPL_Manager
                     {
                         try
                         {
-                            bitmap.Save("Converted/" + folderName + "/" + tplNumber + ".png", System.Drawing.Imaging.ImageFormat.Png);
+                            IColorQuantizer colorQuantizer = new OctreeQuantizer();
+                            Image target = ImageBuffer.QuantizeImage(bitmap, colorQuantizer, 256, 4);
+                            target.Save("Converted/" + folderName + "/" + tplNumber + ".png", ImageFormat.Png);
+                            // bitmap.Save("Converted/" + folderName + "/" + tplNumber + ".png", ImageFormat.Png);
                         }
                         catch (Exception)
                         {
@@ -506,7 +531,11 @@ namespace RE4_PS2_TPL_Manager
                     {
                         try
                         {
-                            bitmap.Save("Converted/" + folderName + "/" + tplNumber + ".bmp", System.Drawing.Imaging.ImageFormat.Bmp);
+                            IColorQuantizer colorQuantizer = new OctreeQuantizer();
+                            Image target256 = ImageBuffer.QuantizeImage(bitmap, colorQuantizer, 256, 4);
+                            target256.Save(".temp/" + folderName + "/" + tplNumber + "_256.bmp", ImageFormat.Bmp);
+                            Image target16 = ImageBuffer.QuantizeImage(bitmap, colorQuantizer, 16, 4);
+                            target16.Save(".temp/" + folderName + "/" + tplNumber + "_16.bmp", ImageFormat.Bmp);
                         }
                         catch (Exception)
                         {
@@ -516,7 +545,10 @@ namespace RE4_PS2_TPL_Manager
                     {
                         try
                         {
-                            bitmap.Save("Converted/" + folderName + "/" + tplNumber + ".png", System.Drawing.Imaging.ImageFormat.Png);
+                            IColorQuantizer colorQuantizer = new OctreeQuantizer();
+                            Image target = ImageBuffer.QuantizeImage(bitmap, colorQuantizer, 256, 4);
+                            target.Save("Converted/" + folderName + "/" + tplNumber + ".png", ImageFormat.Png);
+                            // bitmap.Save("Converted/" + folderName + "/" + tplNumber + ".png", ImageFormat.Png);
                         }
                         catch (Exception)
                         {
@@ -566,7 +598,11 @@ namespace RE4_PS2_TPL_Manager
                     {
                         try
                         {
-                            bitmap.Save("Converted/" + folderName + "/" + tplNumber + ".bmp", System.Drawing.Imaging.ImageFormat.Bmp);
+                            IColorQuantizer colorQuantizer = new OctreeQuantizer();
+                            Image target256 = ImageBuffer.QuantizeImage(bitmap, colorQuantizer, 256, 4);
+                            target256.Save(".temp/" + folderName + "/" + tplNumber + "_256.bmp", ImageFormat.Bmp);
+                            Image target16 = ImageBuffer.QuantizeImage(bitmap, colorQuantizer, 16, 4);
+                            target16.Save(".temp/" + folderName + "/" + tplNumber + "_16.bmp", ImageFormat.Bmp);
                         }
                         catch (Exception)
                         {
@@ -576,12 +612,14 @@ namespace RE4_PS2_TPL_Manager
                     {
                         try
                         {
-                            bitmap.Save("Converted/" + folderName + "/" + tplNumber + ".png", System.Drawing.Imaging.ImageFormat.Png);
+                            IColorQuantizer colorQuantizer = new OctreeQuantizer();
+                            Image target = ImageBuffer.QuantizeImage(bitmap, colorQuantizer, 256, 4);
+                            target.Save("Converted/" + folderName + "/" + tplNumber + ".png", ImageFormat.Png);
+                            // bitmap.Save("Converted/" + folderName + "/" + tplNumber + ".png", ImageFormat.Png);
                         }
                         catch (Exception)
                         {
                         }
-
                     }
                 }
                 else
@@ -862,9 +900,10 @@ namespace RE4_PS2_TPL_Manager
                 }
             }
             br.Close();
+
         }
 
-        public void BMPtoTPL(string[] tplFile)
+        public void BMPtoTPL(string[] tplFile, bool isTemp = false)
         {
             try
             {
@@ -984,7 +1023,7 @@ namespace RE4_PS2_TPL_Manager
                             break;
                         }
                     }
-                    tpl.config3 = defaultValue; // This byte controls the way the texture is applied to the model, 0xDD solves for ITM and SMD
+                    tpl.config3 = defaultValue; // This byte controls the way the texture is applied to the model
                     tpl.unused4 = 0;
                     tpl.unused5 = 0;
                     tpl.endTag = 0x40;
@@ -1005,7 +1044,12 @@ namespace RE4_PS2_TPL_Manager
                     //-------------------------------
                     // WRITING DATA
                     //-------------------------------
-                    BinaryWriter bw = new BinaryWriter(File.Open($"{Path.GetFileNameWithoutExtension(tplFile[i])}.tpl", FileMode.Create));
+                    string directory = $"Converted/{Path.GetFileNameWithoutExtension(tplFile[i])}.tpl";
+                    if (isTemp)
+                    {
+                        directory = $".temp/0_256.tpl";
+                    }
+                    BinaryWriter bw = new BinaryWriter(File.Open(directory, FileMode.Create));
 
                     Console.WriteLine("Writing TPL header");
                     bw.Write(tpl.magic);
@@ -1062,13 +1106,18 @@ namespace RE4_PS2_TPL_Manager
                     else if (tpl.bitDepth == 9)
                     {
                         Console.WriteLine("8 bit texture");
-                        for (int p = 0; p < bmpPalette.Length; p += 4)
+                        for (int p = 0; p < 0x40; p += 4)
                         {
+                            if (p == 0x20)
+                            {
+                                bw.Write(new byte[0x20]);
+                            }
                             bw.Write(bmpPalette[p + 2]); // B
                             bw.Write(bmpPalette[p + 1]); // G
                             bw.Write(bmpPalette[p]); // R
                             bw.Write(bmpPalette[p + 3]); // A
                         }
+                        bw.Write(new byte[0x3A0]);
                     }
                     bw.Close();
                 }

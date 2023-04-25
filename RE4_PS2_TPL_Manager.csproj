@@ -121,6 +121,12 @@
     <Compile Include="Dialog\DialogGetIndex.Designer.cs">
       <DependentUpon>DialogGetIndex.cs</DependentUpon>
     </Compile>
+    <Compile Include="Dialog\DialogGetColor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Dialog\DialogGetColor.Designer.cs">
+      <DependentUpon>DialogGetColor.cs</DependentUpon>
+    </Compile>
     <Compile Include="Ditherers\BaseColorDitherer.cs" />
     <Compile Include="Ditherers\ErrorDiffusion\AtkinsonDithering.cs" />
     <Compile Include="Ditherers\ErrorDiffusion\BaseErrorDiffusionDitherer.cs" />
@@ -196,6 +202,9 @@
     <Compile Include="Struts\TPLDefinition.cs" />
     <EmbeddedResource Include="Credits.resx">
       <DependentUpon>Credits.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Dialog\DialogGetColor.resx">
+      <DependentUpon>DialogGetColor.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Dialog\DialogGetIndex.resx">
       <DependentUpon>DialogGetIndex.cs</DependentUpon>

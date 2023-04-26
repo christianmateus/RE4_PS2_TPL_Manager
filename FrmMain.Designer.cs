@@ -110,6 +110,12 @@
             this.btnFlipX = new System.Windows.Forms.Button();
             this.btnRotate = new System.Windows.Forms.Button();
             this.panel4 = new System.Windows.Forms.Panel();
+            this.ctxPreviewImage = new System.Windows.Forms.ContextMenuStrip(this.components);
+            this.saveAsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.pNGToolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
+            this.bMPToolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
+            this.toolStripSeparator13 = new System.Windows.Forms.ToolStripSeparator();
+            this.swapTextureToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.menuStrip1.SuspendLayout();
             this.panel2.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.texturePreview)).BeginInit();
@@ -127,6 +133,7 @@
             this.groupBox2.SuspendLayout();
             this.panel5.SuspendLayout();
             this.panel4.SuspendLayout();
+            this.ctxPreviewImage.SuspendLayout();
             this.SuspendLayout();
             // 
             // menuStrip1
@@ -482,6 +489,7 @@
             this.texturePreview.Size = new System.Drawing.Size(374, 247);
             this.texturePreview.TabIndex = 5;
             this.texturePreview.TabStop = false;
+            this.texturePreview.MouseDown += new System.Windows.Forms.MouseEventHandler(this.texturePreview_MouseDown);
             // 
             // table
             // 
@@ -873,6 +881,50 @@
             this.panel4.Size = new System.Drawing.Size(373, 194);
             this.panel4.TabIndex = 15;
             // 
+            // ctxPreviewImage
+            // 
+            this.ctxPreviewImage.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.swapTextureToolStripMenuItem,
+            this.toolStripSeparator13,
+            this.saveAsToolStripMenuItem});
+            this.ctxPreviewImage.Name = "ctxPreviewImage";
+            this.ctxPreviewImage.Size = new System.Drawing.Size(143, 54);
+            // 
+            // saveAsToolStripMenuItem
+            // 
+            this.saveAsToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.pNGToolStripMenuItem1,
+            this.bMPToolStripMenuItem1});
+            this.saveAsToolStripMenuItem.Name = "saveAsToolStripMenuItem";
+            this.saveAsToolStripMenuItem.Size = new System.Drawing.Size(142, 22);
+            this.saveAsToolStripMenuItem.Text = "Save as";
+            // 
+            // pNGToolStripMenuItem1
+            // 
+            this.pNGToolStripMenuItem1.Name = "pNGToolStripMenuItem1";
+            this.pNGToolStripMenuItem1.Size = new System.Drawing.Size(180, 22);
+            this.pNGToolStripMenuItem1.Text = "PNG";
+            this.pNGToolStripMenuItem1.Click += new System.EventHandler(this.pNGToolStripMenuItem1_Click);
+            // 
+            // bMPToolStripMenuItem1
+            // 
+            this.bMPToolStripMenuItem1.Name = "bMPToolStripMenuItem1";
+            this.bMPToolStripMenuItem1.Size = new System.Drawing.Size(180, 22);
+            this.bMPToolStripMenuItem1.Text = "BMP";
+            this.bMPToolStripMenuItem1.Click += new System.EventHandler(this.bMPToolStripMenuItem1_Click);
+            // 
+            // toolStripSeparator13
+            // 
+            this.toolStripSeparator13.Name = "toolStripSeparator13";
+            this.toolStripSeparator13.Size = new System.Drawing.Size(139, 6);
+            // 
+            // swapTextureToolStripMenuItem
+            // 
+            this.swapTextureToolStripMenuItem.Name = "swapTextureToolStripMenuItem";
+            this.swapTextureToolStripMenuItem.Size = new System.Drawing.Size(142, 22);
+            this.swapTextureToolStripMenuItem.Text = "Swap texture";
+            this.swapTextureToolStripMenuItem.Click += new System.EventHandler(this.swapTextureToolStripMenuItem_Click);
+            // 
             // FrmMain
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -914,6 +966,7 @@
             this.groupBox2.ResumeLayout(false);
             this.panel5.ResumeLayout(false);
             this.panel4.ResumeLayout(false);
+            this.ctxPreviewImage.ResumeLayout(false);
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -1001,6 +1054,12 @@
         private System.Windows.Forms.ToolStripMenuItem refreshTableToolStripMenuItem;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator12;
         private System.Windows.Forms.ToolStripMenuItem decreaseAllTo16ColorsToolStripMenuItem;
+        private System.Windows.Forms.ContextMenuStrip ctxPreviewImage;
+        private System.Windows.Forms.ToolStripMenuItem swapTextureToolStripMenuItem;
+        private System.Windows.Forms.ToolStripSeparator toolStripSeparator13;
+        private System.Windows.Forms.ToolStripMenuItem saveAsToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem pNGToolStripMenuItem1;
+        private System.Windows.Forms.ToolStripMenuItem bMPToolStripMenuItem1;
     }
 }
 

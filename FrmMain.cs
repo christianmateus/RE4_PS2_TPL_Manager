@@ -1141,6 +1141,7 @@ namespace RE4_PS2_TPL_Manager
                 IColorQuantizer colorQuantizer = new OctreeQuantizer();
                 Image target = ImageBuffer.QuantizeImage(new Bitmap(fileDialog.FileName), colorQuantizer, colorCount, 4);
                 target.Save($".temp/temp_{colorCount}.bmp", ImageFormat.Bmp);
+                target.Dispose();
 
                 ConverterBMP converterBMP = new ConverterBMP();
                 converterBMP.BMPtoTPL(new string[] { $".temp/temp_{colorCount}.bmp" }, true);
@@ -1189,7 +1190,9 @@ namespace RE4_PS2_TPL_Manager
                 {
                     pixels = br2.ReadBytes(width * height);
                 }
-
+                Console.WriteLine("Width: " + width.ToString());
+                Console.WriteLine("Height: " + height.ToString());
+                Console.WriteLine("Pixels: " + pixels.ToString());
                 // Get palette
                 br2.BaseStream.Position = paletteOffset;
                 if (bitDepth == 8)
@@ -1449,6 +1452,29 @@ namespace RE4_PS2_TPL_Manager
             target256.Save($"Converted/{folderName}/{table.Rows[selectedRowIndexGlobal].Cells[1].Value}.bmp", ImageFormat.Bmp);
             UpdateStatusText($"Texture converted at folder 'Converted/{folderName}'");
         }
+        private void pNGToolStripMenuItem1_Click(object sender, EventArgs e)
+        {
+            string folderName = Path.GetFileNameWithoutExtension(filepath);
+            Image a = new Bitmap(texturePreview.Image);
+            a.Save($"Converted/{folderName}/{table.Rows[selectedRowIndexGlobal].Cells[1].Value}.png", ImageFormat.Png);
+            UpdateStatusText($"Texture converted at folder 'Converted/{folderName}'");
+        }
+        private void bMPToolStripMenuItem1_Click(object sender, EventArgs e)
+        {
+            string folderName = Path.GetFileNameWithoutExtension(filepath);
+            int colorCount = 256;
+            Image image = new Bitmap(texturePreview.Image);
+
+            if (table.Rows[selectedRowIndexGlobal].Cells[4].Value.ToString() == "4-bit")
+            {
+                colorCount = 16;
+            }
+
+            IColorQuantizer colorQuantizer = new OctreeQuantizer();
+            Image target256 = ImageBuffer.QuantizeImage(image, colorQuantizer, colorCount, 4);
+            target256.Save($"Converted/{folderName}/{table.Rows[selectedRowIndexGlobal].Cells[1].Value}.bmp", ImageFormat.Bmp);
+            UpdateStatusText($"Texture converted at folder 'Converted/{folderName}'");
+        }
         private void removeAllToolStripMenuItem_Click(object sender, EventArgs e)
         {
             RemoveAll();
@@ -1497,15 +1523,6 @@ namespace RE4_PS2_TPL_Manager
             {
                 MessageBox.Show(exc.Message);
             }
-        }
-        private void button1_Click(object sender, EventArgs e)
-        {
-            ImageFactory imageFactory = new ImageFactory();
-            imageFactory.Load(texturePreview.Image);
-            imageFactory.GaussianSharpen(10);
-
-            texturePreview.Image = imageFactory.Image;
-            table.Rows[selectedRowIndexGlobal].Cells[0].Value = imageFactory.Image;
         }
         private void convertAndImportBMPToolStripMenuItem_Click(object sender, EventArgs e)
         {
@@ -1556,65 +1573,135 @@ namespace RE4_PS2_TPL_Manager
         }
         private void spinBrightness_ValueChanged(object sender, EventArgs e)
         {
-            ImageFactory imageFactory = new ImageFactory();
-            imageFactory.Load(texturePreview.Image);
-            imageFactory.Brightness((int)spinBrightness.Value);
-            texturePreview.Image = imageFactory.Image;
+            if (texturePreview.Image != null)
+            {
+                ImageFactory imageFactory = new ImageFactory();
+                imageFactory.Load(texturePreview.Image);
+                imageFactory.Brightness((int)spinBrightness.Value);
+                texturePreview.Image = imageFactory.Image;
+            }
         }
         private void spinContrast_ValueChanged(object sender, EventArgs e)
         {
-            ImageFactory imageFactory = new ImageFactory();
-            imageFactory.Load(texturePreview.Image);
-            imageFactory.Contrast((int)spinContrast.Value);
-            texturePreview.Image = imageFactory.Image;
+            if (texturePreview.Image != null)
+            {
+                ImageFactory imageFactory = new ImageFactory();
+                imageFactory.Load(texturePreview.Image);
+                imageFactory.Contrast((int)spinContrast.Value);
+                texturePreview.Image = imageFactory.Image;
+            }
         }
         private void spinSaturation_ValueChanged(object sender, EventArgs e)
         {
-            ImageFactory imageFactory = new ImageFactory();
-            imageFactory.Load(texturePreview.Image);
-            imageFactory.Saturation((int)spinSaturation.Value);
-            texturePreview.Image = imageFactory.Image;
+            if (texturePreview.Image != null)
+            {
+                ImageFactory imageFactory = new ImageFactory();
+                imageFactory.Load(texturePreview.Image);
+                imageFactory.Saturation((int)spinSaturation.Value);
+                texturePreview.Image = imageFactory.Image;
+            }
         }
         private void spinSharpen_ValueChanged(object sender, EventArgs e)
         {
-            ImageFactory imageFactory = new ImageFactory();
-            imageFactory.Load(texturePreview.Image);
-            imageFactory.GaussianSharpen((int)spinSharpen.Value);
-            texturePreview.Image = imageFactory.Image;
+            if (texturePreview.Image != null)
+            {
+                ImageFactory imageFactory = new ImageFactory();
+                imageFactory.Load(texturePreview.Image);
+                imageFactory.GaussianSharpen((int)spinSharpen.Value);
+                texturePreview.Image = imageFactory.Image;
+            }
         }
         private void spinPixelate_ValueChanged(object sender, EventArgs e)
         {
-            ImageFactory imageFactory = new ImageFactory();
-            imageFactory.Load(texturePreview.Image);
-            imageFactory.Pixelate((int)spinPixelate.Value);
-            texturePreview.Image = imageFactory.Image;
+            if (texturePreview.Image != null)
+            {
+                ImageFactory imageFactory = new ImageFactory();
+                imageFactory.Load(texturePreview.Image);
+                imageFactory.Pixelate((int)spinPixelate.Value);
+                texturePreview.Image = imageFactory.Image;
+            }
         }
         private void btnRotate_Click_1(object sender, EventArgs e)
         {
-            Image image = new Bitmap(texturePreview.Image);
-            image.RotateFlip(RotateFlipType.Rotate90FlipNone);
-            texturePreview.Image = image;
+            if (texturePreview.Image != null)
+            {
+                Image image = new Bitmap(texturePreview.Image);
+                image.RotateFlip(RotateFlipType.Rotate90FlipNone);
+                texturePreview.Image = image;
+            }
         }
         private void btnFlipX_Click(object sender, EventArgs e)
         {
-            Image image = new Bitmap(texturePreview.Image);
-            image.RotateFlip(RotateFlipType.RotateNoneFlipX);
-            texturePreview.Image = image;
+            if (texturePreview.Image != null)
+            {
+                Image image = new Bitmap(texturePreview.Image);
+                image.RotateFlip(RotateFlipType.RotateNoneFlipX);
+                texturePreview.Image = image;
+            }
         }
         private void btnFlipY_Click(object sender, EventArgs e)
         {
-            Image image = new Bitmap(texturePreview.Image);
-            image.RotateFlip(RotateFlipType.RotateNoneFlipY);
-            texturePreview.Image = image;
+            if (texturePreview.Image != null)
+            {
+                Image image = new Bitmap(texturePreview.Image);
+                image.RotateFlip(RotateFlipType.RotateNoneFlipY);
+                texturePreview.Image = image;
+            }
         }
         private void btnApplyChanges_Click_1(object sender, EventArgs e)
         {
-            table.Rows[selectedRowIndexGlobal].Cells[0].Value = texturePreview.Image;
+            if (texturePreview.Image != null)
+            {
+                // Verifies if imported texture is wider/smaller than original
+                if (texturePreview.Image.Width.ToString() != table.Rows[selectedRowIndexGlobal].Cells[2].Value.ToString() ||
+                    texturePreview.Image.Height.ToString() != table.Rows[selectedRowIndexGlobal].Cells[3].Value.ToString())
+                {
+                    DialogResult result = MessageBox.Show("Image dimensions are different from original image, do you want to insert it anyway?",
+                          "Different dimension detected", MessageBoxButtons.OKCancel, MessageBoxIcon.Question);
+                    if (result == DialogResult.OK)
+                    {
+                        table.Rows[selectedRowIndexGlobal].Cells[0].Value = texturePreview.Image;
+                    }
+                }
+                else
+                {
+                    table.Rows[selectedRowIndexGlobal].Cells[0].Value = texturePreview.Image;
+                }
+
+                // Creating image then converting it to .tpl and adding to the main file
+                string folderName = Path.GetFileNameWithoutExtension(filepath);
+                IColorQuantizer colorQuantizer = new OctreeQuantizer();
+                Image image = new Bitmap(texturePreview.Image);
+
+                if (table.Rows[selectedRowIndexGlobal].Cells[4].Value.ToString() == "8-bit")
+                {
+                    Image target256 = ImageBuffer.QuantizeImage(image, colorQuantizer, 256, 4);
+                    image.Dispose();
+                    target256.Save(".temp/" + folderName + "/" + selectedRowIndexGlobal + "_256.bmp", ImageFormat.Bmp);
+                    target256.Dispose();
+
+                    ConverterBMP converterBMP = new ConverterBMP();
+                    converterBMP.BMPtoTPL(new string[] { ".temp/" + folderName + "/" + selectedRowIndexGlobal + "_256.bmp" }, true);
+
+                    Replace(filepath, ".temp/0_256.tpl", 0, true);
+                }
+                else
+                {
+                    Image target16 = ImageBuffer.QuantizeImage(image, colorQuantizer, 16, 4);
+                    image.Dispose();
+                    target16.Save(".temp/" + folderName + "/" + selectedRowIndexGlobal + "_16.bmp", ImageFormat.Bmp);
+                    target16.Dispose();
+
+                    ConverterBMP converterBMP = new ConverterBMP();
+                    converterBMP.BMPtoTPL(new string[] { ".temp/" + folderName + "/" + selectedRowIndexGlobal + "_16.bmp" }, true);
+
+                    Replace(filepath, ".temp/0_16.tpl", 0, true);
+                }
+            }
         }
         private void refreshTableToolStripMenuItem_Click(object sender, EventArgs e)
         {
             RefreshTable();
-            //PixelFormat.Format24bppRgb;
         }
         private void increaseAllTo256ColorsToolStripMenuItem_Click(object sender, EventArgs e)
         {
@@ -1660,18 +1747,31 @@ namespace RE4_PS2_TPL_Manager
                 }
             }
         }
-
         private void saveFileToolStripMenuItem_Click(object sender, EventArgs e)
         {
 
         }
-
         private void fixBrokenTPLexperimentalToolStripMenuItem_Click(object sender, EventArgs e)
         {
             OpenFileDialog openFileDialog = new OpenFileDialog();
             openFileDialog.Filter = "TPL Files (*.tpl)|*.tpl";
             openFileDialog.ShowDialog();
             UpdateAllOffsets(openFileDialog.FileName);
+            openFileDialog.Dispose();
+        }
+        private void texturePreview_MouseDown(object sender, MouseEventArgs e)
+        {
+            if (e.Button == MouseButtons.Right && texturePreview.Image != null)
+            {
+                ctxPreviewImage.Show(Cursor.Position);
+            }
+        }
+        private void swapTextureToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            OpenFileDialog openFileDialog = new OpenFileDialog();
+            openFileDialog.Filter = "Image Files (*.png;*.bmp;*.tga)|*.png;*.bmp;*.tga";
+            openFileDialog.ShowDialog();
+            texturePreview.Image = new Bitmap(openFileDialog.FileName);
             openFileDialog.Dispose();
         }
     }

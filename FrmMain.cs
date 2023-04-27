@@ -205,55 +205,59 @@ namespace RE4_PS2_TPL_Manager
                 bw.Write(TPL.pixels);
                 bw.Write(TPL.palette);
                 bw.Close();
-
+                Console.WriteLine("Arquivo " + i);
+                Console.WriteLine(TPL.mipmapOffset1.ToString("X"));
+                Console.WriteLine(TPL.mipmapOffset2.ToString("X"));
+                Console.WriteLine("");
                 // Extracts mipmap if option is checked
                 if (includeMipmapToolStripMenuItem.Checked)
                 {
+                    BinaryReader br2 = new BinaryReader(File.Open(filepath, FileMode.Open));
                     for (int count = 0; count < TPL.mipmapCount; count++)
                     {
                         if (count == 0)
-                            br.BaseStream.Position = TPL.mipmapOffset1;
+                            br2.BaseStream.Position = TPL.mipmapOffset1;
                         else
-                            br.BaseStream.Position = TPL.mipmapOffset2;
+                            br2.BaseStream.Position = TPL.mipmapOffset2;
 
-                        MipMap.width = br.ReadUInt16();
-                        MipMap.height = br.ReadUInt16();
-                        MipMap.bitDepth = br.ReadUInt16();
-                        MipMap.interlace = br.ReadUInt16();
-                        MipMap.baseResolution = br.ReadUInt16();
-                        MipMap.mipmapCount = br.ReadUInt16();
-                        MipMap.multipliedResolution = br.ReadUInt16();
-                        MipMap.unused2 = br.ReadUInt16();
+                        MipMap.width = br2.ReadUInt16();
+                        MipMap.height = br2.ReadUInt16();
+                        MipMap.bitDepth = br2.ReadUInt16();
+                        MipMap.interlace = br2.ReadUInt16();
+                        MipMap.baseResolution = br2.ReadUInt16();
+                        MipMap.mipmapCount = br2.ReadUInt16();
+                        MipMap.multipliedResolution = br2.ReadUInt16();
+                        MipMap.unused2 = br2.ReadUInt16();
 
-                        MipMap.mipmapOffset1 = br.ReadUInt32();
-                        MipMap.mipmapOffset2 = br.ReadUInt32();
-                        MipMap.unknown1 = br.ReadUInt32();
-                        MipMap.unknown2 = br.ReadUInt32();
+                        MipMap.mipmapOffset1 = br2.ReadUInt32();
+                        MipMap.mipmapOffset2 = br2.ReadUInt32();
+                        MipMap.unknown1 = br2.ReadUInt32();
+                        MipMap.unknown2 = br2.ReadUInt32();
 
-                        MipMap.pixelsOffset = br.ReadUInt32();
-                        MipMap.paletteOffset = br.ReadUInt32();
-                        MipMap.unused3 = br.ReadByte();
-                        MipMap.config1 = br.ReadByte();
-                        MipMap.config2 = br.ReadByte();
-                        MipMap.config3 = br.ReadUInt16();
-                        MipMap.unused4 = br.ReadByte();
-                        MipMap.unused5 = br.ReadByte();
-                        MipMap.endTag = br.ReadByte();
+                        MipMap.pixelsOffset = br2.ReadUInt32();
+                        MipMap.paletteOffset = br2.ReadUInt32();
+                        MipMap.unused3 = br2.ReadByte();
+                        MipMap.config1 = br2.ReadByte();
+                        MipMap.config2 = br2.ReadByte();
+                        MipMap.config3 = br2.ReadUInt16();
+                        MipMap.unused4 = br2.ReadByte();
+                        MipMap.unused5 = br2.ReadByte();
+                        MipMap.endTag = br2.ReadByte();
 
-                        br.BaseStream.Position = MipMap.pixelsOffset;
+                        br2.BaseStream.Position = MipMap.pixelsOffset;
                         if (MipMap.bitDepth == 8)
                         {
-                            mipmapPixels = br.ReadBytes((int)((MipMap.width * MipMap.height) / 2));
+                            mipmapPixels = br2.ReadBytes((int)((MipMap.width * MipMap.height) / 2));
                         }
                         else if (MipMap.bitDepth == 9)
                         {
-                            mipmapPixels = br.ReadBytes((int)(MipMap.width * MipMap.height));
+                            mipmapPixels = br2.ReadBytes((int)(MipMap.width * MipMap.height));
                         }
 
                         // =============================
                         // CREATING FILE
                         // =============================
-                        BinaryWriter bwMipMap = new BinaryWriter(File.Open($"{folder.Name}/{i}_{count}.tpl", FileMode.Create));
+                        BinaryWriter bwMipMap = new BinaryWriter(File.Open($"Extracted/{folder.Name}/{i}_{count}.tpl", FileMode.Create));
                         bwMipMap.Write(TPL.magic);
                         bwMipMap.Write((uint)0x01);
                         bwMipMap.Write(TPL.startOffset);
@@ -295,6 +299,7 @@ namespace RE4_PS2_TPL_Manager
 
                         bwMipMap.Close();
                     }
+                    br2.Close();
                 }
             }
             UpdateStatusText(TPL.tplCount.ToString() + " textures extracted to " + $"'Extracted/{Path.GetFileNameWithoutExtension(filepath)}'");
@@ -881,9 +886,9 @@ namespace RE4_PS2_TPL_Manager
             interlace.HeaderText = "Interlace";
             table.Columns.Insert(5, interlace);
 
-            table.Columns.Add("baseResolution", "Base Resolution"); // 6
+            table.Columns.Add("baseResolution", "Z-Priority"); // 6
             table.Columns.Add("mipmapCount", "Mipmaps"); // 7
-            table.Columns.Add("multResolution", "Mult. Resolution"); // 8
+            table.Columns.Add("multResolution", "Scale"); // 8
             table.Columns.Add("config1", "Config 1"); // 9
             table.Columns.Add("config2", "Config 2"); // 10
             table.Columns.Add("config3", "Config 3"); // 11
@@ -992,6 +997,15 @@ namespace RE4_PS2_TPL_Manager
                 table.Rows[index].Cells[9].Value = TPL.config1;
                 table.Rows[index].Cells[10].Value = TPL.config2;
                 table.Rows[index].Cells[11].Value = TPL.config3;
+                // Disabling edit
+                table.Rows[index].Cells[2].ReadOnly = true;
+                table.Rows[index].Cells[3].ReadOnly = true;
+                table.Rows[index].Cells[6].ReadOnly = true;
+                table.Rows[index].Cells[7].ReadOnly = true;
+                table.Rows[index].Cells[8].ReadOnly = true;
+                table.Rows[index].Cells[9].ReadOnly = true;
+                table.Rows[index].Cells[10].ReadOnly = true;
+                table.Rows[index].Cells[11].ReadOnly = true;
                 thumbnail.Dispose();
             }
             lblStatusText.Text = texturesTotal + " textures loaded successfully";
@@ -1221,6 +1235,11 @@ namespace RE4_PS2_TPL_Manager
                 RefreshTable();
             }
         }
+        private void ReplaceMipmaps()
+        {
+            ReadTexture(filepath, selectedRowIndexGlobal);
+            MipMap.pixelsOffset = 0;
+        }
         private void Remove()
         {
             ReadTexture(filepath, selectedRowIndexGlobal);
@@ -1259,9 +1278,16 @@ namespace RE4_PS2_TPL_Manager
             UpdateAllOffsets(filepath);
             FillTable();
         }
+        public Bitmap GetResizeImage(Bitmap bitmap, int newWidth, int newHeight)
+        {
+            var newSize = new Size(newWidth, newHeight);
+            return new Bitmap(bitmap, newSize);
+        }
+        // Menu buttons events 
         private void btnCreateNewFile_Click(object sender, EventArgs e)
         {
             CreateEmptyTPL();
+            // Editor 
         }
         private void createEmptyTPLFileToolStripMenuItem_Click(object sender, EventArgs e)
         {
@@ -1309,33 +1335,26 @@ namespace RE4_PS2_TPL_Manager
         {
             CompileFromFolder();
         }
-        private void helpToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            MessageBox.Show("Steps to use this tool:\n" +
-                "1 - Open your .tpl file using the menu;\n" +
-                "2 - Choose the option you want, you can add new textures and/or extract all textures from loaded .tpl;\n" +
-                "3 - If you want to create a new .tpl using every .tpl inside a folder, just click on 'Compile from folder...';\n" +
-                "4 - If you're using Game Graphic Studio to view the textures, uncheck 'Include Mipmap' from options menu.\n\n" +
-                "Tips:\nYou can add multiple textures at once;\n" +
-                "After extracting, textures names ending with underscore _ means it's a mipmap.", "Help");
-        }
         private void showHiddenToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            // Show hidden parameters toggle
-            if (showHiddenToolStripMenuItem.Checked)
+            if (filepath != "")
             {
-                for (int column = 0; column < table.ColumnCount; column++)
+                // Show hidden parameters toggle
+                if (showHiddenToolStripMenuItem.Checked)
                 {
-                    table.Columns[column].Visible = true;
+                    for (int column = 0; column < table.ColumnCount; column++)
+                    {
+                        table.Columns[column].Visible = true;
+                    }
                 }
-            }
-            else
-            {
-                table.Columns[6].Visible = false;
-                table.Columns[8].Visible = false;
-                table.Columns[9].Visible = false;
-                table.Columns[10].Visible = false;
-                table.Columns[11].Visible = false;
+                else
+                {
+                    table.Columns[6].Visible = false;
+                    table.Columns[8].Visible = false;
+                    table.Columns[9].Visible = false;
+                    table.Columns[10].Visible = false;
+                    table.Columns[11].Visible = false;
+                }
             }
         }
         private void table_CellClick(object sender, DataGridViewCellEventArgs e)
@@ -1475,6 +1494,20 @@ namespace RE4_PS2_TPL_Manager
             target256.Save($"Converted/{folderName}/{table.Rows[selectedRowIndexGlobal].Cells[1].Value}.bmp", ImageFormat.Bmp);
             UpdateStatusText($"Texture converted at folder 'Converted/{folderName}'");
         }
+        private void tGAToolStripMenuItem1_Click(object sender, EventArgs e)
+        {
+            string folderName = Path.GetFileNameWithoutExtension(filepath);
+            var tga = TGASharpLib.TGA.FromBitmap(new Bitmap(texturePreview.Image));
+            tga.Save($"Converted/{folderName}/{table.Rows[selectedRowIndexGlobal].Cells[1].Value}.tga");
+            UpdateStatusText($"Texture converted at folder 'Converted/{folderName}'");
+        }
+        private void tGAToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            string folderName = Path.GetFileNameWithoutExtension(filepath);
+            var tga = TGASharpLib.TGA.FromBitmap(new Bitmap(texturePreview.Image));
+            tga.Save($"Converted/{folderName}/{table.Rows[selectedRowIndexGlobal].Cells[1].Value}.tga");
+            UpdateStatusText($"Texture converted at folder 'Converted/{folderName}'");
+        }
         private void removeAllToolStripMenuItem_Click(object sender, EventArgs e)
         {
             RemoveAll();
@@ -1534,6 +1567,149 @@ namespace RE4_PS2_TPL_Manager
             ConverterBMP converterBMP = new ConverterBMP();
             converterBMP.BMPtoTPL(openFileDialog.FileNames);
         }
+        private void refreshTableToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            RefreshTable();
+        }
+        private void increaseAllTo256ColorsToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (filepath != "")
+            {
+                for (int i = 0; i < table.Rows.Count; i++)
+                {
+                    selectedRowIndexGlobal = i;
+                    if (table.Rows[i].Cells[4].Value.ToString() != "8-bit")
+                    {
+                        string folderName = Path.GetFileNameWithoutExtension(filepath);
+
+                        ConverterBMP converterBMP = new ConverterBMP();
+                        converterBMP.BMPtoTPL(new string[] { $".temp/{folderName}/{i}_256.bmp" }, true);
+                        Replace(filepath, $".temp/0_256.tpl", 0, true);
+                    }
+                    else
+                    {
+                        continue;
+                    }
+                }
+            }
+        }
+        private void decreaseAllTo16ColorsToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (filepath != "")
+            {
+                for (int i = 0; i < table.Rows.Count; i++)
+                {
+                    selectedRowIndexGlobal = i;
+                    if (table.Rows[i].Cells[4].Value.ToString() != "4-bit")
+                    {
+                        string folderName = Path.GetFileNameWithoutExtension(filepath);
+
+                        ConverterBMP converterBMP = new ConverterBMP();
+                        converterBMP.BMPtoTPL(new string[] { $".temp/{folderName}/{i}_16.bmp" }, true);
+                        Replace(filepath, $".temp/0_16.tpl", 0, true);
+                    }
+                    else
+                    {
+                        continue;
+                    }
+                }
+            }
+        }
+        private void saveFileToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                BinaryWriter bw = new BinaryWriter(File.Open(filepath, FileMode.Open));
+                for (int i = 0; i < table.Rows.Count; i++)
+                {
+                    bw.BaseStream.Position = 0x10 + (0x30 * i);
+                    bw.Write((ushort)table.Rows[i].Cells[2].Value);
+                    bw.Write((ushort)table.Rows[i].Cells[3].Value);
+
+                    if (table.Rows[i].Cells[4].Value.ToString() == "32-bit")
+                    {
+                        bw.Write((ushort)0x06);
+                    }
+                    else if (table.Rows[i].Cells[4].Value.ToString() == "8-bit")
+                    {
+                        bw.Write((ushort)0x09);
+                    }
+                    else
+                    {
+                        bw.Write((ushort)0x08);
+                    }
+
+                    switch (table.Rows[i].Cells[5].Value.ToString())
+                    {
+                        case "BGRA":
+                            bw.Write((ushort)0x00);
+                            break;
+                        case "BGRA Inverted":
+                            bw.Write((ushort)0x01);
+                            break;
+                        case "PS2":
+                            bw.Write((ushort)0x02);
+                            break;
+                        case "PS2 Inverted":
+                            bw.Write((ushort)0x03);
+                            break;
+                        default:
+                            bw.Write((ushort)0x00);
+                            break;
+                    }
+
+                    bw.Write((ushort)table.Rows[i].Cells[6].Value); // Z-priority
+                    bw.Write((ushort)table.Rows[i].Cells[7].Value); // Mipmap count
+                    bw.Write((ushort)table.Rows[i].Cells[8].Value); // Scale
+                    bw.BaseStream.Position = 0x39 + (0x30 * i);
+                    bw.Write((byte)table.Rows[i].Cells[9].Value); // Render Config 1
+                    bw.Write((byte)table.Rows[i].Cells[10].Value); // Render Config 2
+                    bw.Write((ushort)table.Rows[i].Cells[11].Value); // Render Config 3
+                }
+                bw.Close();
+                UpdateStatusText("File changes saved successfully!");
+            }
+            catch (Exception exc)
+            {
+                MessageBox.Show(exc.Message);
+            }
+        }
+        private void fixBrokenTPLexperimentalToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            OpenFileDialog openFileDialog = new OpenFileDialog();
+            openFileDialog.Filter = "TPL Files (*.tpl)|*.tpl";
+            openFileDialog.ShowDialog();
+            UpdateAllOffsets(openFileDialog.FileName);
+            openFileDialog.Dispose();
+        }
+        private void usabilityToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            MessageBox.Show("Steps to use this tool:\n" +
+                "1 - Open your .tpl file using the menu or create one from scratch;\n\n" +
+                "2 - Choose the option you want by right-clicking a row in the table." +
+                " You can add new textures, extract all, convert, replace, remove and etc...;\n\n" +
+                "3 - If you want to create a new .tpl using every .tpl inside a folder," +
+                "just click on 'Compile from folder...' from Tools menu;\n\n" +
+                "4 - If you use the editor on the right side, click on Apply Changes to rebuild the .tpl.\n\n\n" +
+                "Tips:\nYou can add multiple textures at once;\n" +
+                "After extracting, textures names ending with underscore _ means it's a mipmap.", "Help");
+        }
+        private void problemsToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            MessageBox.Show("Table not showing all textures:\n" +
+                "Reopen the .tpl to quick fix, or click on 'Refresh table' in the File menu.\n\n" +
+                "Cannot replace texture:\n" +
+                "Images above 8-bit (like 32-bit, 24-bit and 16-bit) are not fully supported. " +
+                "Always try to use images with indexed palette.\n\n" +
+                "Texture is not applied correctly in the character/weapon/model:\n" +
+                "PS2 has a limited hardware, so keep in mind to use resolution lower than 1024px. " +
+                "Textures with 'Inverted' interlace are always horizontal oriented (90º clockwise).\n\n" +
+                "Texture is flickering in-game:\n" +
+                "In the Options menu, activate 'Show hidden' then put 16384 on Scale field.\n\n" +
+                "Texture is disappearing/overlapping in some camera angles:\n" +
+                "In the Options menu, activate 'Show hidden' then put 4096 on Z-Priority field.", "Help"
+                , MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
         private void FrmMain_FormClosing(object sender, FormClosingEventArgs e)
         {
             Directory.Delete(".temp", true);
@@ -1571,6 +1747,7 @@ namespace RE4_PS2_TPL_Manager
                     MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
             }
         }
+        // Editor 
         private void spinBrightness_ValueChanged(object sender, EventArgs e)
         {
             if (texturePreview.Image != null)
@@ -1648,6 +1825,20 @@ namespace RE4_PS2_TPL_Manager
                 texturePreview.Image = image;
             }
         }
+        private void btnUpscale_Click(object sender, EventArgs e)
+        {
+            if (texturePreview.Image != null)
+            {
+                GetResizeImage((Bitmap)texturePreview.Image, texturePreview.Image.Width * 2, texturePreview.Image.Height * 2);
+            }
+        }
+        private void btnDownscale_Click(object sender, EventArgs e)
+        {
+            if (texturePreview.Image != null)
+            {
+                GetResizeImage((Bitmap)texturePreview.Image, texturePreview.Image.Width / 2, texturePreview.Image.Height / 2);
+            }
+        }
         private void btnApplyChanges_Click_1(object sender, EventArgs e)
         {
             if (texturePreview.Image != null)
@@ -1699,80 +1890,35 @@ namespace RE4_PS2_TPL_Manager
                 }
             }
         }
-        private void refreshTableToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            RefreshTable();
-        }
-        private void increaseAllTo256ColorsToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            if (filepath != "")
-            {
-                for (int i = 0; i < table.Rows.Count; i++)
-                {
-                    selectedRowIndexGlobal = i;
-                    if (table.Rows[i].Cells[4].Value.ToString() != "8-bit")
-                    {
-                        string folderName = Path.GetFileNameWithoutExtension(filepath);
-
-                        ConverterBMP converterBMP = new ConverterBMP();
-                        converterBMP.BMPtoTPL(new string[] { $".temp/{folderName}/{i}_256.bmp" }, true);
-                        Replace(filepath, $".temp/0_256.tpl", 0, true);
-                    }
-                    else
-                    {
-                        continue;
-                    }
-                }
-            }
-        }
-        private void decreaseAllTo16ColorsToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            if (filepath != "")
-            {
-                for (int i = 0; i < table.Rows.Count; i++)
-                {
-                    selectedRowIndexGlobal = i;
-                    if (table.Rows[i].Cells[4].Value.ToString() != "4-bit")
-                    {
-                        string folderName = Path.GetFileNameWithoutExtension(filepath);
-
-                        ConverterBMP converterBMP = new ConverterBMP();
-                        converterBMP.BMPtoTPL(new string[] { $".temp/{folderName}/{i}_16.bmp" }, true);
-                        Replace(filepath, $".temp/0_16.tpl", 0, true);
-                    }
-                    else
-                    {
-                        continue;
-                    }
-                }
-            }
-        }
-        private void saveFileToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-
-        }
-        private void fixBrokenTPLexperimentalToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            OpenFileDialog openFileDialog = new OpenFileDialog();
-            openFileDialog.Filter = "TPL Files (*.tpl)|*.tpl";
-            openFileDialog.ShowDialog();
-            UpdateAllOffsets(openFileDialog.FileName);
-            openFileDialog.Dispose();
-        }
+        // Texture preview
         private void texturePreview_MouseDown(object sender, MouseEventArgs e)
         {
             if (e.Button == MouseButtons.Right && texturePreview.Image != null)
             {
                 ctxPreviewImage.Show(Cursor.Position);
             }
+            Bitmap a = GetResizeImage((Bitmap)texturePreview.Image, 128, 128);
+            texturePreview.Image = a;
+            return;
         }
         private void swapTextureToolStripMenuItem_Click(object sender, EventArgs e)
         {
             OpenFileDialog openFileDialog = new OpenFileDialog();
             openFileDialog.Filter = "Image Files (*.png;*.bmp;*.tga)|*.png;*.bmp;*.tga";
             openFileDialog.ShowDialog();
+
+            // If it's TGA, then convert to bitmap
+            if (Path.GetExtension(openFileDialog.FileName).ToLower() == ".tga")
+            {
+                TGASharpLib.TGA tga = new TGASharpLib.TGA(new Bitmap(openFileDialog.FileName));
+                texturePreview.Image = new Bitmap(tga.ToBitmap());
+                texturePreview.Dispose();
+                return;
+            }
+
             texturePreview.Image = new Bitmap(openFileDialog.FileName);
             openFileDialog.Dispose();
         }
+
     }
 }

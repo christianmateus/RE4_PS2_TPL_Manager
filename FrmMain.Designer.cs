@@ -62,10 +62,11 @@
             this.includeMipmapToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator3 = new System.Windows.Forms.ToolStripSeparator();
             this.showHiddenToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.showThumbnailsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator7 = new System.Windows.Forms.ToolStripSeparator();
             this.disableDuplicatePromptToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.helpToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.usabilityToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.problemsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.creditsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.btnOpenFile = new System.Windows.Forms.Button();
             this.btnCreateNewFile = new System.Windows.Forms.Button();
@@ -80,6 +81,7 @@
             this.convertToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.pNGToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.bMPToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.tGAToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator9 = new System.Windows.Forms.ToolStripSeparator();
             this.removeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.removeMipmapsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -111,11 +113,14 @@
             this.btnRotate = new System.Windows.Forms.Button();
             this.panel4 = new System.Windows.Forms.Panel();
             this.ctxPreviewImage = new System.Windows.Forms.ContextMenuStrip(this.components);
+            this.swapTextureToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.toolStripSeparator13 = new System.Windows.Forms.ToolStripSeparator();
             this.saveAsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.pNGToolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
             this.bMPToolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
-            this.toolStripSeparator13 = new System.Windows.Forms.ToolStripSeparator();
-            this.swapTextureToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.tGAToolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
+            this.btnUpscale = new System.Windows.Forms.Button();
+            this.btnDownscale = new System.Windows.Forms.Button();
             this.menuStrip1.SuspendLayout();
             this.panel2.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.texturePreview)).BeginInit();
@@ -370,7 +375,6 @@
             this.includeMipmapToolStripMenuItem,
             this.toolStripSeparator3,
             this.showHiddenToolStripMenuItem,
-            this.showThumbnailsToolStripMenuItem,
             this.toolStripSeparator7,
             this.disableDuplicatePromptToolStripMenuItem});
             this.optionsToolStripMenuItem.Name = "optionsToolStripMenuItem";
@@ -400,15 +404,6 @@
             this.showHiddenToolStripMenuItem.Text = "Show Hidden";
             this.showHiddenToolStripMenuItem.Click += new System.EventHandler(this.showHiddenToolStripMenuItem_Click);
             // 
-            // showThumbnailsToolStripMenuItem
-            // 
-            this.showThumbnailsToolStripMenuItem.Checked = true;
-            this.showThumbnailsToolStripMenuItem.CheckOnClick = true;
-            this.showThumbnailsToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.showThumbnailsToolStripMenuItem.Name = "showThumbnailsToolStripMenuItem";
-            this.showThumbnailsToolStripMenuItem.Size = new System.Drawing.Size(241, 22);
-            this.showThumbnailsToolStripMenuItem.Text = "Show Thumbnails";
-            // 
             // toolStripSeparator7
             // 
             this.toolStripSeparator7.Name = "toolStripSeparator7";
@@ -416,16 +411,33 @@
             // 
             // disableDuplicatePromptToolStripMenuItem
             // 
+            this.disableDuplicatePromptToolStripMenuItem.CheckOnClick = true;
             this.disableDuplicatePromptToolStripMenuItem.Name = "disableDuplicatePromptToolStripMenuItem";
             this.disableDuplicatePromptToolStripMenuItem.Size = new System.Drawing.Size(241, 22);
             this.disableDuplicatePromptToolStripMenuItem.Text = "Disable duplicate prompt";
             // 
             // helpToolStripMenuItem
             // 
+            this.helpToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.usabilityToolStripMenuItem,
+            this.problemsToolStripMenuItem});
             this.helpToolStripMenuItem.Name = "helpToolStripMenuItem";
             this.helpToolStripMenuItem.Size = new System.Drawing.Size(44, 20);
             this.helpToolStripMenuItem.Text = "Help";
-            this.helpToolStripMenuItem.Click += new System.EventHandler(this.helpToolStripMenuItem_Click);
+            // 
+            // usabilityToolStripMenuItem
+            // 
+            this.usabilityToolStripMenuItem.Name = "usabilityToolStripMenuItem";
+            this.usabilityToolStripMenuItem.Size = new System.Drawing.Size(129, 22);
+            this.usabilityToolStripMenuItem.Text = "Usability";
+            this.usabilityToolStripMenuItem.Click += new System.EventHandler(this.usabilityToolStripMenuItem_Click);
+            // 
+            // problemsToolStripMenuItem
+            // 
+            this.problemsToolStripMenuItem.Name = "problemsToolStripMenuItem";
+            this.problemsToolStripMenuItem.Size = new System.Drawing.Size(129, 22);
+            this.problemsToolStripMenuItem.Text = "Problems?";
+            this.problemsToolStripMenuItem.Click += new System.EventHandler(this.problemsToolStripMenuItem_Click);
             // 
             // creditsToolStripMenuItem
             // 
@@ -549,7 +561,8 @@
             // 
             this.convertToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.pNGToolStripMenuItem,
-            this.bMPToolStripMenuItem});
+            this.bMPToolStripMenuItem,
+            this.tGAToolStripMenuItem});
             this.convertToolStripMenuItem.Name = "convertToolStripMenuItem";
             this.convertToolStripMenuItem.Size = new System.Drawing.Size(185, 22);
             this.convertToolStripMenuItem.Text = "Convert";
@@ -567,6 +580,13 @@
             this.bMPToolStripMenuItem.Size = new System.Drawing.Size(99, 22);
             this.bMPToolStripMenuItem.Text = "BMP";
             this.bMPToolStripMenuItem.Click += new System.EventHandler(this.bMPToolStripMenuItem_Click);
+            // 
+            // tGAToolStripMenuItem
+            // 
+            this.tGAToolStripMenuItem.Name = "tGAToolStripMenuItem";
+            this.tGAToolStripMenuItem.Size = new System.Drawing.Size(99, 22);
+            this.tGAToolStripMenuItem.Text = "TGA";
+            this.tGAToolStripMenuItem.Click += new System.EventHandler(this.tGAToolStripMenuItem_Click);
             // 
             // toolStripSeparator9
             // 
@@ -811,6 +831,8 @@
             this.panel5.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left)));
             this.panel5.AutoScroll = true;
+            this.panel5.Controls.Add(this.btnUpscale);
+            this.panel5.Controls.Add(this.btnDownscale);
             this.panel5.Controls.Add(this.button1);
             this.panel5.Controls.Add(this.btnFlipY);
             this.panel5.Controls.Add(this.btnFlipX);
@@ -825,9 +847,9 @@
             this.button1.BackColor = System.Drawing.Color.PaleTurquoise;
             this.button1.Cursor = System.Windows.Forms.Cursors.Hand;
             this.button1.ForeColor = System.Drawing.Color.Black;
-            this.button1.Location = new System.Drawing.Point(26, 123);
+            this.button1.Location = new System.Drawing.Point(10, 123);
             this.button1.Name = "button1";
-            this.button1.Size = new System.Drawing.Size(118, 23);
+            this.button1.Size = new System.Drawing.Size(148, 23);
             this.button1.TabIndex = 11;
             this.button1.Text = "Apply changes";
             this.button1.UseVisualStyleBackColor = false;
@@ -837,7 +859,7 @@
             // 
             this.btnFlipY.Cursor = System.Windows.Forms.Cursors.Hand;
             this.btnFlipY.ForeColor = System.Drawing.Color.Black;
-            this.btnFlipY.Location = new System.Drawing.Point(48, 86);
+            this.btnFlipY.Location = new System.Drawing.Point(10, 86);
             this.btnFlipY.Name = "btnFlipY";
             this.btnFlipY.Size = new System.Drawing.Size(67, 23);
             this.btnFlipY.TabIndex = 10;
@@ -849,7 +871,7 @@
             // 
             this.btnFlipX.Cursor = System.Windows.Forms.Cursors.Hand;
             this.btnFlipX.ForeColor = System.Drawing.Color.Black;
-            this.btnFlipX.Location = new System.Drawing.Point(48, 52);
+            this.btnFlipX.Location = new System.Drawing.Point(10, 52);
             this.btnFlipX.Name = "btnFlipX";
             this.btnFlipX.Size = new System.Drawing.Size(67, 23);
             this.btnFlipX.TabIndex = 9;
@@ -861,7 +883,7 @@
             // 
             this.btnRotate.Cursor = System.Windows.Forms.Cursors.Hand;
             this.btnRotate.ForeColor = System.Drawing.Color.Black;
-            this.btnRotate.Location = new System.Drawing.Point(48, 18);
+            this.btnRotate.Location = new System.Drawing.Point(10, 18);
             this.btnRotate.Name = "btnRotate";
             this.btnRotate.Size = new System.Drawing.Size(67, 23);
             this.btnRotate.TabIndex = 8;
@@ -890,11 +912,24 @@
             this.ctxPreviewImage.Name = "ctxPreviewImage";
             this.ctxPreviewImage.Size = new System.Drawing.Size(143, 54);
             // 
+            // swapTextureToolStripMenuItem
+            // 
+            this.swapTextureToolStripMenuItem.Name = "swapTextureToolStripMenuItem";
+            this.swapTextureToolStripMenuItem.Size = new System.Drawing.Size(142, 22);
+            this.swapTextureToolStripMenuItem.Text = "Swap texture";
+            this.swapTextureToolStripMenuItem.Click += new System.EventHandler(this.swapTextureToolStripMenuItem_Click);
+            // 
+            // toolStripSeparator13
+            // 
+            this.toolStripSeparator13.Name = "toolStripSeparator13";
+            this.toolStripSeparator13.Size = new System.Drawing.Size(139, 6);
+            // 
             // saveAsToolStripMenuItem
             // 
             this.saveAsToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.pNGToolStripMenuItem1,
-            this.bMPToolStripMenuItem1});
+            this.bMPToolStripMenuItem1,
+            this.tGAToolStripMenuItem1});
             this.saveAsToolStripMenuItem.Name = "saveAsToolStripMenuItem";
             this.saveAsToolStripMenuItem.Size = new System.Drawing.Size(142, 22);
             this.saveAsToolStripMenuItem.Text = "Save as";
@@ -902,28 +937,47 @@
             // pNGToolStripMenuItem1
             // 
             this.pNGToolStripMenuItem1.Name = "pNGToolStripMenuItem1";
-            this.pNGToolStripMenuItem1.Size = new System.Drawing.Size(180, 22);
+            this.pNGToolStripMenuItem1.Size = new System.Drawing.Size(99, 22);
             this.pNGToolStripMenuItem1.Text = "PNG";
             this.pNGToolStripMenuItem1.Click += new System.EventHandler(this.pNGToolStripMenuItem1_Click);
             // 
             // bMPToolStripMenuItem1
             // 
             this.bMPToolStripMenuItem1.Name = "bMPToolStripMenuItem1";
-            this.bMPToolStripMenuItem1.Size = new System.Drawing.Size(180, 22);
+            this.bMPToolStripMenuItem1.Size = new System.Drawing.Size(99, 22);
             this.bMPToolStripMenuItem1.Text = "BMP";
             this.bMPToolStripMenuItem1.Click += new System.EventHandler(this.bMPToolStripMenuItem1_Click);
             // 
-            // toolStripSeparator13
+            // tGAToolStripMenuItem1
             // 
-            this.toolStripSeparator13.Name = "toolStripSeparator13";
-            this.toolStripSeparator13.Size = new System.Drawing.Size(139, 6);
+            this.tGAToolStripMenuItem1.Name = "tGAToolStripMenuItem1";
+            this.tGAToolStripMenuItem1.Size = new System.Drawing.Size(99, 22);
+            this.tGAToolStripMenuItem1.Text = "TGA";
+            this.tGAToolStripMenuItem1.Click += new System.EventHandler(this.tGAToolStripMenuItem1_Click);
             // 
-            // swapTextureToolStripMenuItem
+            // btnUpscale
             // 
-            this.swapTextureToolStripMenuItem.Name = "swapTextureToolStripMenuItem";
-            this.swapTextureToolStripMenuItem.Size = new System.Drawing.Size(142, 22);
-            this.swapTextureToolStripMenuItem.Text = "Swap texture";
-            this.swapTextureToolStripMenuItem.Click += new System.EventHandler(this.swapTextureToolStripMenuItem_Click);
+            this.btnUpscale.Cursor = System.Windows.Forms.Cursors.Hand;
+            this.btnUpscale.ForeColor = System.Drawing.Color.Black;
+            this.btnUpscale.Location = new System.Drawing.Point(83, 35);
+            this.btnUpscale.Name = "btnUpscale";
+            this.btnUpscale.Size = new System.Drawing.Size(75, 23);
+            this.btnUpscale.TabIndex = 13;
+            this.btnUpscale.Text = "Upscale";
+            this.btnUpscale.UseVisualStyleBackColor = true;
+            this.btnUpscale.Click += new System.EventHandler(this.btnUpscale_Click);
+            // 
+            // btnDownscale
+            // 
+            this.btnDownscale.Cursor = System.Windows.Forms.Cursors.Hand;
+            this.btnDownscale.ForeColor = System.Drawing.Color.Black;
+            this.btnDownscale.Location = new System.Drawing.Point(83, 69);
+            this.btnDownscale.Name = "btnDownscale";
+            this.btnDownscale.Size = new System.Drawing.Size(75, 23);
+            this.btnDownscale.TabIndex = 12;
+            this.btnDownscale.Text = "Downscale";
+            this.btnDownscale.UseVisualStyleBackColor = true;
+            this.btnDownscale.Click += new System.EventHandler(this.btnDownscale_Click);
             // 
             // FrmMain
             // 
@@ -992,7 +1046,6 @@
         private System.Windows.Forms.ToolStripMenuItem saveFileToolStripMenuItem;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator4;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator3;
-        private System.Windows.Forms.ToolStripMenuItem showThumbnailsToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem addNewTexturesToolStripMenuItem;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator5;
         private System.Windows.Forms.ToolStripMenuItem toolsToolStripMenuItem;
@@ -1060,6 +1113,12 @@
         private System.Windows.Forms.ToolStripMenuItem saveAsToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem pNGToolStripMenuItem1;
         private System.Windows.Forms.ToolStripMenuItem bMPToolStripMenuItem1;
+        private System.Windows.Forms.ToolStripMenuItem usabilityToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem problemsToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem tGAToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem tGAToolStripMenuItem1;
+        private System.Windows.Forms.Button btnUpscale;
+        private System.Windows.Forms.Button btnDownscale;
     }
 }
 

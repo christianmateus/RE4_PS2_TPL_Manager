@@ -2,7 +2,6 @@
 using SimplePaletteQuantizer.Quantizers;
 using SimplePaletteQuantizer.Quantizers.Octree;
 using System;
-using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
@@ -934,13 +933,27 @@ namespace RE4_PS2_TPL_Manager
                 tpl.interlace = 0;
                 tpl.zPriority = 256;
                 tpl.mipmapCount = 0;
-                if (tpl.width > 128)
+                if (tpl.width >= 128)
                 {
-                    tpl.scale = (ushort)(tpl.width * 8);
+                    if (tpl.bitDepth == 9)
+                    {
+                        tpl.scale = (ushort)(tpl.width * 16);
+                    }
+                    else
+                    {
+                        tpl.scale = (ushort)(tpl.width * 8);
+                    }
                 }
                 else
                 {
-                    tpl.scale = (ushort)(tpl.width * 4);
+                    if (tpl.bitDepth == 9)
+                    {
+                        tpl.scale = (ushort)(tpl.width * 8);
+                    }
+                    else
+                    {
+                        tpl.scale = (ushort)(tpl.width * 4);
+                    }
                 }
                 tpl.unused2 = 0;
 
@@ -1063,11 +1076,13 @@ namespace RE4_PS2_TPL_Manager
                 bw.Write(tpl.bitDepth);
                 bw.Write(tpl.interlace);
                 bw.Write(tpl.zPriority);
-                bw.Write(tpl.mipmapCount);
+                bw.BaseStream.Position += 2;
+                // bw.Write(tpl.mipmapCount);
                 bw.Write(tpl.scale);
                 bw.Write(tpl.unused2);
-                bw.Write(tpl.mipmapOffset1);
-                bw.Write(tpl.mipmapOffset2);
+                bw.BaseStream.Position += 8;
+                // bw.Write(tpl.mipmapOffset1);
+                // bw.Write(tpl.mipmapOffset2);
                 bw.Write(tpl.unk1);
                 bw.Write(tpl.unk2);
                 bw.Write(tpl.pixelsOffset);
@@ -1156,16 +1171,6 @@ namespace RE4_PS2_TPL_Manager
             //MessageBox.Show("Files converted successfully, check on the root of folder 'Converted'.",
             //    $"Success on converting {tplFile.Length} textures",
             //    MessageBoxButtons.OK, MessageBoxIcon.Information);
-        }
-        public static byte[] IntArrayToByteArray(int[] ints)
-        {
-            List<byte> bytes = new List<byte>(ints.GetUpperBound(0) * sizeof(byte));
-
-            foreach (int integer in ints)
-            {
-                bytes.Add(BitConverter.GetBytes(integer)[0]);
-            }
-            return bytes.ToArray();
         }
     }
 }

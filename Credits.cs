@@ -28,5 +28,10 @@ namespace RE4_PS2_TPL_Manager
         {
             Process.Start(new ProcessStartInfo("https://imageprocessor.org/imageprocessor/") { UseShellExecute = true });
         }
+
+        private void linkLabel2_LinkClicked_1(object sender, LinkLabelLinkClickedEventArgs e)
+        {
+            Process.Start(new ProcessStartInfo("https://www.youtube.com/channel/UCpITv0DaCqF2M09UGKVfSDw") { UseShellExecute = true });
+        }
     }
 }

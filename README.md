@@ -5,14 +5,14 @@ A texture editor for Resident Evil 4 game, to be used in PS2 version.
 It is still a work in progress, but many functionalities are already working. Huge thanks to @JADERLINK for creating the deinterlace functions, now with this we'll have no limits on editing .tpl files.
 
 ### Features planned to be added soon:
-- Convert all textures to .png and back to .tpl
-- Convert all textures to .tga and back to .tpl
-- Convert all textures to .bmp and back to .tpl
+- [x] Convert all textures to .png and back to .tpl
+- [x] Convert all textures to .tga and back to .tpl
+- [x] Convert all textures to .bmp and back to .tpl
 - [x] Replace textures in 2 clicks
 - [x] Remove textures
 - [x] Add new textures
 - Mipmap support for adding and removing them 
 - [x] Duplicate textures
-- Add basic editing features like brightness, contrast, color, sharpness adjustments
+- [x] Add basic editing features like brightness, contrast, color, sharpness adjustments
 - [x] Compile .tpl from folder
 - and possible more to come soon...

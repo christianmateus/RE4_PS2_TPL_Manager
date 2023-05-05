@@ -59,6 +59,8 @@
             this.toolStripSeparator8 = new System.Windows.Forms.ToolStripSeparator();
             this.convertAndImportBMPToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator11 = new System.Windows.Forms.ToolStripSeparator();
+            this.extractTPLFromEFFToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.toolStripSeparator14 = new System.Windows.Forms.ToolStripSeparator();
             this.fixBrokenTPLexperimentalToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.optionsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.includeMipmapToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -70,6 +72,7 @@
             this.usabilityToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.problemsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.creditsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.stopBackgroundTaskToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.btnOpenFile = new System.Windows.Forms.Button();
             this.btnCreateNewFile = new System.Windows.Forms.Button();
             this.panel2 = new System.Windows.Forms.Panel();
@@ -136,6 +139,10 @@
             this.tGAToolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
             this.extendViewToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.animatedViewToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.lblDropHere = new System.Windows.Forms.Label();
+            this.extractTPLFromSMDToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.importTPLToSMDToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.toolStripSeparator15 = new System.Windows.Forms.ToolStripSeparator();
             this.menuStrip1.SuspendLayout();
             this.panel2.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.texturePreview)).BeginInit();
@@ -165,7 +172,8 @@
             this.toolsToolStripMenuItem,
             this.optionsToolStripMenuItem,
             this.helpToolStripMenuItem,
-            this.creditsToolStripMenuItem});
+            this.creditsToolStripMenuItem,
+            this.stopBackgroundTaskToolStripMenuItem});
             this.menuStrip1.LayoutStyle = System.Windows.Forms.ToolStripLayoutStyle.HorizontalStackWithOverflow;
             this.menuStrip1.Location = new System.Drawing.Point(0, 0);
             this.menuStrip1.Name = "menuStrip1";
@@ -281,8 +289,11 @@
             // removeAllMipmapsToolStripMenuItem
             // 
             this.removeAllMipmapsToolStripMenuItem.Name = "removeAllMipmapsToolStripMenuItem";
+            this.removeAllMipmapsToolStripMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)(((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.Shift) 
+            | System.Windows.Forms.Keys.M)));
             this.removeAllMipmapsToolStripMenuItem.Size = new System.Drawing.Size(274, 22);
             this.removeAllMipmapsToolStripMenuItem.Text = "Remove all mipmaps";
+            this.removeAllMipmapsToolStripMenuItem.Click += new System.EventHandler(this.removeAllMipmapsToolStripMenuItem_Click);
             // 
             // toolStripSeparator2
             // 
@@ -365,6 +376,11 @@
             this.toolStripSeparator8,
             this.convertAndImportBMPToolStripMenuItem,
             this.toolStripSeparator11,
+            this.extractTPLFromEFFToolStripMenuItem,
+            this.toolStripSeparator15,
+            this.extractTPLFromSMDToolStripMenuItem,
+            this.importTPLToSMDToolStripMenuItem,
+            this.toolStripSeparator14,
             this.fixBrokenTPLexperimentalToolStripMenuItem});
             this.toolsToolStripMenuItem.Name = "toolsToolStripMenuItem";
             this.toolsToolStripMenuItem.Size = new System.Drawing.Size(46, 20);
@@ -395,6 +411,19 @@
             // 
             this.toolStripSeparator11.Name = "toolStripSeparator11";
             this.toolStripSeparator11.Size = new System.Drawing.Size(228, 6);
+            // 
+            // extractTPLFromEFFToolStripMenuItem
+            // 
+            this.extractTPLFromEFFToolStripMenuItem.Name = "extractTPLFromEFFToolStripMenuItem";
+            this.extractTPLFromEFFToolStripMenuItem.ShortcutKeys = System.Windows.Forms.Keys.F3;
+            this.extractTPLFromEFFToolStripMenuItem.Size = new System.Drawing.Size(231, 22);
+            this.extractTPLFromEFFToolStripMenuItem.Text = "Extract TPL from .EFF";
+            this.extractTPLFromEFFToolStripMenuItem.Click += new System.EventHandler(this.extractTPLFromEFFToolStripMenuItem_Click);
+            // 
+            // toolStripSeparator14
+            // 
+            this.toolStripSeparator14.Name = "toolStripSeparator14";
+            this.toolStripSeparator14.Size = new System.Drawing.Size(228, 6);
             // 
             // fixBrokenTPLexperimentalToolStripMenuItem
             // 
@@ -462,14 +491,14 @@
             // usabilityToolStripMenuItem
             // 
             this.usabilityToolStripMenuItem.Name = "usabilityToolStripMenuItem";
-            this.usabilityToolStripMenuItem.Size = new System.Drawing.Size(129, 22);
+            this.usabilityToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.usabilityToolStripMenuItem.Text = "Usability";
             this.usabilityToolStripMenuItem.Click += new System.EventHandler(this.usabilityToolStripMenuItem_Click);
             // 
             // problemsToolStripMenuItem
             // 
             this.problemsToolStripMenuItem.Name = "problemsToolStripMenuItem";
-            this.problemsToolStripMenuItem.Size = new System.Drawing.Size(129, 22);
+            this.problemsToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
             this.problemsToolStripMenuItem.Text = "Problems?";
             this.problemsToolStripMenuItem.Click += new System.EventHandler(this.problemsToolStripMenuItem_Click);
             // 
@@ -479,6 +508,15 @@
             this.creditsToolStripMenuItem.Size = new System.Drawing.Size(56, 20);
             this.creditsToolStripMenuItem.Text = "Credits";
             this.creditsToolStripMenuItem.Click += new System.EventHandler(this.creditsToolStripMenuItem_Click);
+            // 
+            // stopBackgroundTaskToolStripMenuItem
+            // 
+            this.stopBackgroundTaskToolStripMenuItem.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(250)))), ((int)(((byte)(200)))), ((int)(((byte)(200)))));
+            this.stopBackgroundTaskToolStripMenuItem.Name = "stopBackgroundTaskToolStripMenuItem";
+            this.stopBackgroundTaskToolStripMenuItem.Size = new System.Drawing.Size(134, 20);
+            this.stopBackgroundTaskToolStripMenuItem.Text = "Stop background task";
+            this.stopBackgroundTaskToolStripMenuItem.Visible = false;
+            this.stopBackgroundTaskToolStripMenuItem.Click += new System.EventHandler(this.stopBackgroundTaskToolStripMenuItem_Click);
             // 
             // btnOpenFile
             // 
@@ -643,6 +681,7 @@
             this.removeMipmapsToolStripMenuItem.Name = "removeMipmapsToolStripMenuItem";
             this.removeMipmapsToolStripMenuItem.Size = new System.Drawing.Size(185, 22);
             this.removeMipmapsToolStripMenuItem.Text = "Remove mipmaps";
+            this.removeMipmapsToolStripMenuItem.Click += new System.EventHandler(this.removeMipmapsToolStripMenuItem_Click);
             // 
             // toolStripSeparator10
             // 
@@ -1112,19 +1151,19 @@
             this.extendViewToolStripMenuItem,
             this.animatedViewToolStripMenuItem});
             this.ctxPreviewImage.Name = "ctxPreviewImage";
-            this.ctxPreviewImage.Size = new System.Drawing.Size(181, 120);
+            this.ctxPreviewImage.Size = new System.Drawing.Size(178, 98);
             // 
             // swapTextureToolStripMenuItem
             // 
             this.swapTextureToolStripMenuItem.Name = "swapTextureToolStripMenuItem";
-            this.swapTextureToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.swapTextureToolStripMenuItem.Size = new System.Drawing.Size(177, 22);
             this.swapTextureToolStripMenuItem.Text = "Swap texture";
             this.swapTextureToolStripMenuItem.Click += new System.EventHandler(this.swapTextureToolStripMenuItem_Click);
             // 
             // toolStripSeparator13
             // 
             this.toolStripSeparator13.Name = "toolStripSeparator13";
-            this.toolStripSeparator13.Size = new System.Drawing.Size(177, 6);
+            this.toolStripSeparator13.Size = new System.Drawing.Size(174, 6);
             // 
             // saveAsToolStripMenuItem
             // 
@@ -1133,7 +1172,7 @@
             this.bMPToolStripMenuItem1,
             this.tGAToolStripMenuItem1});
             this.saveAsToolStripMenuItem.Name = "saveAsToolStripMenuItem";
-            this.saveAsToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.saveAsToolStripMenuItem.Size = new System.Drawing.Size(177, 22);
             this.saveAsToolStripMenuItem.Text = "Save as";
             // 
             // pNGToolStripMenuItem1
@@ -1160,17 +1199,49 @@
             // extendViewToolStripMenuItem
             // 
             this.extendViewToolStripMenuItem.Name = "extendViewToolStripMenuItem";
-            this.extendViewToolStripMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Alt | System.Windows.Forms.Keys.F)));
-            this.extendViewToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.extendViewToolStripMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.F)));
+            this.extendViewToolStripMenuItem.Size = new System.Drawing.Size(177, 22);
             this.extendViewToolStripMenuItem.Text = "Extend view";
             this.extendViewToolStripMenuItem.Click += new System.EventHandler(this.extendViewToolStripMenuItem_Click);
             // 
             // animatedViewToolStripMenuItem
             // 
             this.animatedViewToolStripMenuItem.Name = "animatedViewToolStripMenuItem";
-            this.animatedViewToolStripMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.animatedViewToolStripMenuItem.Size = new System.Drawing.Size(177, 22);
             this.animatedViewToolStripMenuItem.Text = "Animated view";
             this.animatedViewToolStripMenuItem.Click += new System.EventHandler(this.animatedViewToolStripMenuItem_Click);
+            // 
+            // lblDropHere
+            // 
+            this.lblDropHere.AutoSize = true;
+            this.lblDropHere.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(50)))), ((int)(((byte)(50)))), ((int)(((byte)(50)))));
+            this.lblDropHere.ForeColor = System.Drawing.Color.White;
+            this.lblDropHere.Location = new System.Drawing.Point(214, 356);
+            this.lblDropHere.Name = "lblDropHere";
+            this.lblDropHere.Size = new System.Drawing.Size(115, 13);
+            this.lblDropHere.TabIndex = 16;
+            this.lblDropHere.Text = "or drop a .tpl file here...";
+            // 
+            // extractTPLFromSMDToolStripMenuItem
+            // 
+            this.extractTPLFromSMDToolStripMenuItem.Name = "extractTPLFromSMDToolStripMenuItem";
+            this.extractTPLFromSMDToolStripMenuItem.ShortcutKeys = System.Windows.Forms.Keys.F4;
+            this.extractTPLFromSMDToolStripMenuItem.Size = new System.Drawing.Size(231, 22);
+            this.extractTPLFromSMDToolStripMenuItem.Text = "Extract TPL from .SMD";
+            this.extractTPLFromSMDToolStripMenuItem.Click += new System.EventHandler(this.extractTPLFromSMDToolStripMenuItem_Click);
+            // 
+            // importTPLToSMDToolStripMenuItem
+            // 
+            this.importTPLToSMDToolStripMenuItem.Name = "importTPLToSMDToolStripMenuItem";
+            this.importTPLToSMDToolStripMenuItem.ShortcutKeys = System.Windows.Forms.Keys.F5;
+            this.importTPLToSMDToolStripMenuItem.Size = new System.Drawing.Size(231, 22);
+            this.importTPLToSMDToolStripMenuItem.Text = "Inject TPL into .SMD";
+            this.importTPLToSMDToolStripMenuItem.Click += new System.EventHandler(this.importTPLToSMDToolStripMenuItem_Click);
+            // 
+            // toolStripSeparator15
+            // 
+            this.toolStripSeparator15.Name = "toolStripSeparator15";
+            this.toolStripSeparator15.Size = new System.Drawing.Size(228, 6);
             // 
             // FrmMain
             // 
@@ -1180,6 +1251,7 @@
             this.AutoScroll = true;
             this.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(30)))), ((int)(((byte)(30)))), ((int)(((byte)(30)))));
             this.ClientSize = new System.Drawing.Size(951, 553);
+            this.Controls.Add(this.lblDropHere);
             this.Controls.Add(this.panel4);
             this.Controls.Add(this.panel1);
             this.Controls.Add(this.statusStrip1);
@@ -1330,6 +1402,13 @@
         private System.Windows.Forms.Label label9;
         private System.Windows.Forms.ToolStripMenuItem extendViewToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem animatedViewToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem stopBackgroundTaskToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem extractTPLFromEFFToolStripMenuItem;
+        private System.Windows.Forms.ToolStripSeparator toolStripSeparator14;
+        private System.Windows.Forms.Label lblDropHere;
+        private System.Windows.Forms.ToolStripSeparator toolStripSeparator15;
+        private System.Windows.Forms.ToolStripMenuItem extractTPLFromSMDToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem importTPLToSMDToolStripMenuItem;
     }
 }
 

@@ -15,4 +15,6 @@ It is still a work in progress, but many functionalities are already working. Hu
 - [x] Duplicate textures
 - [x] Add basic editing features like brightness, contrast, color, sharpness adjustments
 - [x] Compile .tpl from folder
+- [x] Extract .tpl from .smd container
+- [x] Import .tpl back inside .smd
 - and possible more to come soon...

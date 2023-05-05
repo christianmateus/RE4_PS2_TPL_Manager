@@ -906,6 +906,8 @@ namespace RE4_PS2_TPL_Manager
 
         public void BMPtoTPL(string[] tplFile, bool isTemp = false)
         {
+            FrmMain frmMain = new FrmMain();
+
             for (int i = 0; i < tplFile.Length; i++)
             {
                 BinaryReader br = new BinaryReader(File.Open(tplFile[i], FileMode.Open));
@@ -932,7 +934,7 @@ namespace RE4_PS2_TPL_Manager
 
                 tpl.interlace = 0;
                 tpl.zPriority = 256;
-                tpl.mipmapCount = 0;
+                tpl.mipmapCount = frmMain.mipmapCount;
                 if (tpl.width >= 128)
                 {
                     if (tpl.bitDepth == 9)
@@ -957,10 +959,10 @@ namespace RE4_PS2_TPL_Manager
                 }
                 tpl.unused2 = 0;
 
-                tpl.mipmapOffset1 = 0;
-                tpl.mipmapOffset2 = 0;
-                tpl.unk1 = 0;
-                tpl.unk2 = 0;
+                tpl.mipmapOffset1 = frmMain.mipmapOffset1;
+                tpl.mipmapOffset2 = frmMain.mipmapOffset2;
+                tpl.unk1 = frmMain.mipmapUnk1;
+                tpl.unk2 = frmMain.mipmapUnk2;
 
                 tpl.pixelsOffset = 0x40;
                 tpl.paletteOffset = 0;

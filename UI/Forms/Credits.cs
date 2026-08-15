@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Windows.Forms;
+using RE4_PS2_TPL_Manager.UI.Theming;
 namespace RE4_PS2_TPL_Manager
 {
     public partial class Credits : Form
@@ -7,6 +8,7 @@ namespace RE4_PS2_TPL_Manager
         public Credits()
         {
             InitializeComponent();
+            DarkTheme.ApplyDialog(this);
         }
 
         private void linkLabel2_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)

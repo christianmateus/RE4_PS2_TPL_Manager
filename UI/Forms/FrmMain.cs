@@ -1,8 +1,13 @@
-﻿using ImageProcessor;
+﻿using ImageConvertor;
+using ImageProcessor;
 using ImageProcessor.Imaging;
 using ImageProcessor.Imaging.Filters.Photo;
 using Microsoft.WindowsAPICodePack.Dialogs;
 using RE4_PS2_TPL_Manager.Dialog;
+using RE4_PS2_TPL_Manager.Core.Services;
+using RE4_PS2_TPL_Manager.Helpers;
+using RE4_PS2_TPL_Manager.UI.Theming;
+using SimplePaletteQuantizer.Extensions;
 using SimplePaletteQuantizer.Helpers;
 using SimplePaletteQuantizer.Quantizers;
 using SimplePaletteQuantizer.Quantizers.Octree;
@@ -20,18 +25,27 @@ namespace RE4_PS2_TPL_Manager
 {
     public partial class FrmMain : Form
     {
+        private const string AppTitle = "RE4 PS2 TPL Manager v1.2.0";
         // Structs
         TPLDefinition.TPL TPL;
         MipMap MipMap;
         TPLDefinition TPLClass = new TPLDefinition();
+        readonly TplReader tplReader = new TplReader();
+        readonly TplWriter tplWriter;
+        readonly TextureDecoder textureDecoder = new TextureDecoder();
+        readonly TextureEncoder textureEncoder = new TextureEncoder();
+        readonly InterlaceConverter interlaceConverter = new InterlaceConverter();
 
         // Global
         OpenFileDialog dialog = new OpenFileDialog();
         string filepath = "";
         int selectedRowIndexGlobal = 0;
         System.Timers.Timer timer;
+        private ToolStripMenuItem recentFilesMenu;
+        private readonly List<string> recentFiles = new List<string>();
+        private bool backupCreatedForCurrentFile = false;
 
-        // Fields used in replace function (BMPtoTPL), not the correct place to be, but ok for now
+        // Legacy mipmap metadata kept for compatibility with older editor routines
         public ushort mipmapCount { get; set; }
         public uint mipmapOffset1 { get; set; }
         public uint mipmapOffset2 { get; set; }
@@ -42,202 +56,134 @@ namespace RE4_PS2_TPL_Manager
         public FrmMain()
         {
             InitializeComponent();
-            ColorSlider.ColorSlider slider = new ColorSlider.ColorSlider();
-            slider.Location = new Point(50, 50);
-            slider.Maximum = 100;
-            slider.Minimum = -100;
-
-            // Directory used for temporary creating and deleting files
-            string path = ".temp";
-            if (!Directory.Exists(path))
-            {
-                DirectoryInfo di = Directory.CreateDirectory(path);
-                di.Attributes = FileAttributes.Directory | FileAttributes.Hidden;
-            }
+            tplWriter = new TplWriter(tplReader);
+            ApplyModernTheme();
+            InitializeRecentFilesMenu();
+            InitializeInterlaceMenu();
         }
         public FrmMain(string tplFile)
         {
             InitializeComponent();
+            tplWriter = new TplWriter(tplReader);
+            ApplyModernTheme();
+            InitializeRecentFilesMenu();
+            InitializeInterlaceMenu();
             filepath = tplFile;
+            AddRecentFile(filepath);
             try
             {
                 FillTable();
                 btnOpenFile.Dispose();
                 btnCreateNewFile.Dispose();
                 lblDropHere.Dispose();
-                this.Text = "RE4 PS2 TPL Manager - " + Path.GetFileName(filepath);
+                this.Text = AppTitle + " - " + Path.GetFileName(filepath);
             }
             catch (Exception exc)
             {
                 MessageBox.Show(exc.Message);
             }
         }
+
+        private void InitializeInterlaceMenu()
+        {
+            ToolStripMenuItem item = new ToolStripMenuItem("Convert Interlace...");
+            item.ToolTipText = "Losslessly convert the selected indexed texture between BGRA/linear and PS2/swizzled pixel layouts.";
+            item.Click += convertInterlaceToolStripMenuItem_Click;
+            toolsToolStripMenuItem.DropDownItems.Add(new ToolStripSeparator());
+            toolsToolStripMenuItem.DropDownItems.Add(item);
+        }
+
+        private void convertInterlaceToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (String.IsNullOrWhiteSpace(filepath) || table.Rows.Count == 0 || selectedRowIndexGlobal < 0)
+            {
+                MessageBox.Show("Open a TPL and select a texture first.", "Convert Interlace", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            try
+            {
+                TPLDefinition.TPL source = tplReader.ReadTexture(filepath, selectedRowIndexGlobal);
+                string currentName = source.interlace == 0 ? "BGRA" : source.interlace == 1 ? "BGRA Inverted" : source.interlace == 2 ? "PS2" : source.interlace == 3 ? "PS2 Inverted" : "Unknown (" + source.interlace + ")";
+                if (source.mipmapCount > 0)
+                    throw new NotSupportedException("Convert Interlace does not modify mipmaps yet. Use it on textures without mipmaps.");
+
+                using (DialogInterlaceConversion dialogInterlace = new DialogInterlaceConversion(currentName))
+                {
+                    if (dialogInterlace.ShowDialog(this) != DialogResult.OK)
+                    {
+                        UpdateStatusText("Interlace conversion cancelled");
+                        return;
+                    }
+
+                    EnsureBackup();
+                    UpdateStatusText("Converting texture interlace layout...");
+                    TPLDefinition.TPL converted = interlaceConverter.ConvertFamily(source, dialogInterlace.TargetPs2);
+                    tplWriter.ReplaceTexture(filepath, selectedRowIndexGlobal, converted);
+
+                    string resultName = converted.interlace == 0 ? "BGRA" : converted.interlace == 1 ? "BGRA Inverted" : converted.interlace == 2 ? "PS2" : "PS2 Inverted";
+                    RefreshTableAndKeepSelection(selectedRowIndexGlobal);
+                    UpdateStatusText("Texture " + selectedRowIndexGlobal + " interlace converted: " + currentName + " -> " + resultName);
+                }
+            }
+            catch (Exception ex)
+            {
+                UpdateStatusText("Interlace conversion failed: " + ex.Message);
+                MessageBox.Show(ex.Message, "Convert Interlace", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+            }
+        }
+
+        private void ApplyModernTheme()
+        {
+            DarkTheme.Apply(this, menuStrip1, statusStrip1, ctxMenuTable, ctxPreviewImage);
+            texturePreview.SizeMode = PictureBoxSizeMode.Normal;
+            table.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            table.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+            table.MultiSelect = true;
+        }
+
         private void CreateEmptyTPL()
         {
-            BinaryWriter bw = new BinaryWriter(File.Open("temp.tpl", FileMode.Create));
-            bw.Write((uint)4096);
-            bw.Write((uint)0x00);
-            bw.Write((uint)0x10);
-            bw.Write((uint)0x00);
-            bw.Close();
-
-            filepath = "temp.tpl";
-            btnCreateNewFile.Dispose();
-            btnOpenFile.Dispose();
-            if (filepath != "")
+            using (SaveFileDialog saveDialog = new SaveFileDialog())
             {
-                this.Text = "RE4 PS2 TPL Manager - " + Path.GetFileName(filepath);
+                saveDialog.Title = "Create empty TPL";
+                saveDialog.Filter = "RE4 PS2 TPL Files (*.tpl)|*.tpl";
+                saveDialog.DefaultExt = "tpl";
+                saveDialog.AddExtension = true;
+                saveDialog.OverwritePrompt = true;
+                saveDialog.FileName = "new_texture_pack.tpl";
+
+                if (!String.IsNullOrWhiteSpace(filepath))
+                {
+                    string currentDirectory = Path.GetDirectoryName(filepath);
+                    if (!String.IsNullOrWhiteSpace(currentDirectory) && Directory.Exists(currentDirectory))
+                        saveDialog.InitialDirectory = currentDirectory;
+                }
+
+                if (saveDialog.ShowDialog() != DialogResult.OK)
+                {
+                    UpdateStatusText("Create empty TPL cancelled");
+                    return;
+                }
+
+                string newPath = saveDialog.FileName;
+                tplWriter.CreateEmpty(newPath);
+                filepath = newPath;
+                backupCreatedForCurrentFile = false;
+                AddRecentFile(filepath);
+
+                if (!btnCreateNewFile.IsDisposed) btnCreateNewFile.Dispose();
+                if (!btnOpenFile.IsDisposed) btnOpenFile.Dispose();
+                if (!lblDropHere.IsDisposed) lblDropHere.Dispose();
+
+                this.Text = AppTitle + " - " + Path.GetFileName(filepath);
                 FillTable();
+                UpdateStatusText("Empty TPL created • " + Path.GetFileName(filepath));
             }
         }
         private void UpdateAllOffsets(string tplFilename)
         {
-            BinaryReader br = new BinaryReader(File.Open(tplFilename, FileMode.Open));
-            TPL.magic = br.ReadUInt32();
-            TPL.tplCount = br.ReadUInt32();
-            TPL.startOffset = br.ReadUInt32();
-            TPL.unused1 = br.ReadUInt32();
-            int chunk = 0x00;
-            int totalMipmaps = 0x00;
-
-            Console.WriteLine("Updating " + TPL.tplCount + " texture offsets");
-
-            // Iterates through each header to get mipmap quantity
-            for (int i = 0; i < TPL.tplCount; i++)
-            {
-                br.BaseStream.Position = 0x1A + chunk;
-                ushort mipmapCount = br.ReadUInt16();
-
-                if (mipmapCount > 0)
-                {
-                    totalMipmaps += mipmapCount;
-                }
-                chunk += 0x30;
-            }
-            br.Close();
-
-            uint tempAcumulatorPixels = 0x00;
-            uint tempAcumulatorPalette = 0x00;
-            uint tempAcumulatorMipMapHeader = 0x00;
-            uint tempAcumulatorMipMapPixels = 0x00;
-
-            for (int i = 0; i < TPL.tplCount + totalMipmaps; i++)
-            {
-                BinaryReader br2 = new BinaryReader(File.Open(tplFilename, FileMode.Open));
-                br2.BaseStream.Position = 0x10 + (0x30 * i);
-                TPL.width = br2.ReadUInt16();
-                TPL.height = br2.ReadUInt16();
-                TPL.bitDepth = br2.ReadUInt16();
-                TPL.interlace = br2.ReadUInt16();
-                TPL.zPriority = br2.ReadUInt16();
-                TPL.mipmapCount = br2.ReadUInt16();
-
-                br2.BaseStream.Position = 0x30 + (0x30 * i);
-                TPL.pixelsOffset = br2.ReadUInt32();
-                TPL.paletteOffset = br2.ReadUInt32();
-
-                br2.BaseStream.Position = 0x20 + (0x30 * i);
-                TPL.mipmapOffset1 = br2.ReadUInt32();
-                TPL.mipmapOffset2 = br2.ReadUInt32();
-
-                // Get mipmap 1 parameters
-                br2.BaseStream.Position = TPL.mipmapOffset1;
-                ushort mipmapWidth1 = br2.ReadUInt16();
-                ushort mipmapHeight1 = br2.ReadUInt16();
-                ushort mipmapBitDepth1 = br2.ReadUInt16();
-                br2.BaseStream.Position = TPL.mipmapOffset1 + 0x20;
-                uint mipmapPixelsOffset1 = br2.ReadUInt32();
-
-                // Get mipmap 2 parameters
-                br2.BaseStream.Position = TPL.mipmapOffset2;
-                ushort mipmapWidth2 = br2.ReadUInt16();
-                ushort mipmapHeight2 = br2.ReadUInt16();
-                ushort mipmapBitDepth2 = br2.ReadUInt16();
-                br2.BaseStream.Position = TPL.mipmapOffset2 + 0x20;
-                uint mipmapPixelsOffset2 = br2.ReadUInt32();
-                br2.Close();
-
-                BinaryWriter bw = new BinaryWriter(File.Open(tplFilename, FileMode.Open));
-
-                // Updates mipmap headers offsets
-                if (TPL.mipmapCount > 0 && i < TPL.tplCount)
-                {
-                    bw.BaseStream.Position = 0x20 + (0x30 * i);
-                    for (int h = 0; h < TPL.mipmapCount; h++)
-                    {
-                        bw.Write((uint)((0x30 * TPL.tplCount) + 0x10 + tempAcumulatorMipMapHeader));
-                        tempAcumulatorMipMapHeader += 0x30;
-                    }
-                }
-
-                bw.BaseStream.Position = 0x30 + (0x30 * i);
-                // Pixels offset
-
-                bw.Write((uint)(tempAcumulatorPixels + tempAcumulatorPalette + tempAcumulatorMipMapPixels +
-(0x30 * (TPL.tplCount + totalMipmaps)) + 0x10));
-
-                // Acumulator pixels
-                if (TPL.bitDepth == 8)
-                    tempAcumulatorPixels += (uint)((TPL.width * TPL.height) / 2);
-                else
-                    tempAcumulatorPixels += (uint)(TPL.width * TPL.height);
-
-                // Palette offset (only updates on textures, not on mipmaps)
-                if (!(i >= TPL.tplCount))
-                {
-                    bw.Write((uint)(tempAcumulatorPixels + tempAcumulatorPalette + tempAcumulatorMipMapPixels +
-                        (0x30 * (TPL.tplCount + totalMipmaps)) + 0x10));
-                }
-
-                // Acumulator palette
-                if (TPL.bitDepth == 8)
-                    tempAcumulatorPalette += 0x80;
-                else
-                    tempAcumulatorPalette += 0x400;
-
-                bw.Close();
-            }
-
-            // -----------------------------
-            // MIPMAPS
-            // Used to update all mipmap offsets
-            int offsetAcumulator = 0;
-            for (int i = 0; i < totalMipmaps; i++)
-            {
-                // Getting last texture metadata
-                BinaryReader brMip = new BinaryReader(File.Open(filepath, FileMode.Open));
-                brMip.BaseStream.Position = 0x14 + (0x30 * (TPL.tplCount - 1));
-                TPL.bitDepth = brMip.ReadUInt16();
-                brMip.BaseStream.Position = 0x34 + (0x30 * (TPL.tplCount - 1));
-                TPL.paletteOffset = brMip.ReadUInt32();
-
-                // Get mipmap metadata
-                brMip.BaseStream.Position = 0x10 + (0x30 * (TPL.tplCount + i));
-                MipMap.width = brMip.ReadUInt16();
-                MipMap.height = brMip.ReadUInt16();
-                MipMap.bitDepth = brMip.ReadUInt16();
-                brMip.Close();
-
-                // Update offsets
-                BinaryWriter bw = new BinaryWriter(File.OpenWrite(filepath));
-                bw.BaseStream.Position = 0x30 + (0x30 * (TPL.tplCount + i));
-                switch (TPL.bitDepth)
-                {
-                    case 8:
-                        TPL.paletteOffset += 0x80;
-                        bw.Write(TPL.paletteOffset + offsetAcumulator);
-                        offsetAcumulator += MipMap.width * MipMap.height / 2;
-                        break;
-                    case 9:
-                        TPL.paletteOffset += 0x400;
-                        bw.Write(TPL.paletteOffset + offsetAcumulator);
-                        offsetAcumulator += MipMap.width * MipMap.height;
-                        break;
-                    default:
-                        break;
-                }
-                bw.Close();
-            }
+            tplWriter.UpdateAllOffsets(tplFilename);
         }
         private void ExtractTPL()
         {
@@ -399,241 +345,330 @@ namespace RE4_PS2_TPL_Manager
         }
         private void AddNewTextures()
         {
-            if (filepath != "")
-            {
-                // -----------------
-                // SPLITS LOADED FILE INTO TWO PARTS (TOP & BOTTOM)
-                // -----------------
-                BinaryReader br = new BinaryReader(File.Open(filepath, FileMode.Open));
+            EnsureBackup();
+            if (filepath == "") return;
 
+            // --- Primeiro, carrega tudo do TPL original ---
+            byte[] topPart;
+            byte[] bottomPart;
+            uint tplCountOriginal;
+            int totalMipmaps = 0;
+
+            using (BinaryReader br = new BinaryReader(File.Open(filepath, FileMode.Open, FileAccess.Read, FileShare.Read)))
+            {
                 TPL.magic = br.ReadUInt32();
-                TPL.tplCount = br.ReadUInt32();
+                TPL.tplCount = tplCountOriginal = br.ReadUInt32();
                 TPL.startOffset = br.ReadUInt32();
                 TPL.unused1 = br.ReadUInt32();
-                int chunk = 0x00;
-                int totalMipmaps = 0x00;
+                int chunk = 0;
 
-                // Iterates through each header to get mipmap quantity
                 for (int i = 0; i < TPL.tplCount; i++)
                 {
                     br.BaseStream.Position = 0x1A + chunk;
                     ushort mipmapCount = br.ReadUInt16();
-
                     if (mipmapCount > 0)
-                    {
                         totalMipmaps += mipmapCount;
-                    }
                     chunk += 0x30;
                 }
 
-                // Get top part of file (headers)
                 br.BaseStream.Position = 0;
-                byte[] topPart = br.ReadBytes((int)(0x10 + (0x30 * (TPL.tplCount + totalMipmaps))));
-                byte[] bottomPart = new byte[0];
+                topPart = br.ReadBytes((int)(0x10 + (0x30 * (TPL.tplCount + totalMipmaps))));
+
+                bottomPart = new byte[0];
 
                 if (TPL.tplCount > 0)
                 {
-                    // Get bottom part of file (data)
                     br.BaseStream.Position = 0x30;
                     uint pixelsStart = br.ReadUInt32();
 
                     br.BaseStream.Position = pixelsStart;
                     bottomPart = br.ReadBytes((int)(br.BaseStream.Length - br.BaseStream.Position));
                 }
+            } // <- aqui o arquivo é fechado!
 
-                br.Close();
+            // --- Agora, seleciona os novos arquivos para adicionar ---
+            OpenFileDialog dialog = new OpenFileDialog();
+            dialog.Filter = "TPL/Images (*.tpl;*.png;*.jpg;*.jpeg;*.bmp)|*.tpl;*.png;*.jpg;*.jpeg;*.bmp";
+            dialog.Multiselect = true;
+            if (dialog.ShowDialog() != DialogResult.OK) return;
 
-                // -----------------
-                // GETS SELECTED NEW TPL FILES
-                // -----------------
-                OpenFileDialog dialog = new OpenFileDialog();
-                dialog.Filter = "RE4 PS2 TPL Files (*.tpl)|*.tpl";
-                dialog.Multiselect = true;
-                dialog.ShowDialog();
+            List<byte[]> headers = new List<byte[]>();
+            List<byte[]> pixels = new List<byte[]>();
+            List<byte[]> palettes = new List<byte[]>();
 
-                List<byte[]> headers = new List<byte[]>();
-                List<byte[]> pixels = new List<byte[]>();
-                List<byte[]> palettes = new List<byte[]>();
-                List<byte[]> mipmapHeaders = new List<byte[]>();
-                List<byte[]> mipmapPixels = new List<byte[]>();
+            foreach (var file in dialog.FileNames)
+            {
+                string ext = Path.GetExtension(file).ToLower();
 
-                // Iterates through each selected file
-                for (int tpl = 0; tpl < dialog.FileNames.Length; tpl++)
+                if (ext == ".tpl")
                 {
-                    BinaryReader brTpl = new BinaryReader(File.Open(dialog.FileNames[tpl], FileMode.Open));
-                    TPL.magic = brTpl.ReadUInt32();
-                    TPL.tplCount = brTpl.ReadUInt32();
-                    TPL.startOffset = brTpl.ReadUInt32();
-                    TPL.unused1 = brTpl.ReadUInt32();
-                    chunk = 0x00;
-                    totalMipmaps = 0x00;
-
-                    // Iterates through each texture inside .tpl
-                    for (int texture = 0; texture < TPL.tplCount; texture++)
-                    {
-                        // Returns to header position on each iteration
-                        brTpl.BaseStream.Position = 0x10 + (0x30 * texture);
-                        TPL.width = brTpl.ReadUInt16();
-                        TPL.height = brTpl.ReadUInt16();
-                        TPL.bitDepth = brTpl.ReadUInt16();
-                        TPL.interlace = brTpl.ReadUInt16();
-                        TPL.zPriority = brTpl.ReadUInt16();
-                        TPL.mipmapCount = brTpl.ReadUInt16();
-                        TPL.scale = brTpl.ReadUInt16();
-                        TPL.unused2 = brTpl.ReadUInt16();
-
-                        TPL.mipmapOffset1 = brTpl.ReadUInt32();
-                        TPL.mipmapOffset2 = brTpl.ReadUInt32();
-                        TPL.unknown1 = brTpl.ReadUInt32();
-                        TPL.unknown2 = brTpl.ReadUInt32();
-
-                        TPL.pixelsOffset = brTpl.ReadUInt32();
-                        TPL.paletteOffset = brTpl.ReadUInt32();
-
-                        Console.WriteLine("Arquivo: " + tpl);
-                        // Iterates through each header to get mipmap quantity (only 1 time to get all)
-                        if (texture == 0)
-                        {
-                            for (int i = 0; i < TPL.tplCount; i++)
-                            {
-                                brTpl.BaseStream.Position = 0x1A + chunk;
-                                ushort mipmapCount = brTpl.ReadUInt16();
-                                if (mipmapCount > 0)
-                                {
-                                    totalMipmaps += mipmapCount;
-                                }
-                                chunk += 0x30;
-                                Console.WriteLine("Mipmaps: " + totalMipmaps);
-                            }
-                        }
-
-                        // Get all texture headers
-                        brTpl.BaseStream.Position = 0x10 + (0x30 * texture);
-                        headers.Add(brTpl.ReadBytes(0x30));
-
-                        // Get all mipmap headers
-                        if (totalMipmaps > 0 && texture == TPL.tplCount - 1)
-                        {
-                            Console.WriteLine("Adding mipmap headers...");
-                            mipmapHeaders.Add(brTpl.ReadBytes((int)(0x30 * totalMipmaps)));
-                        }
-
-                        // Get all pixels [textures]
-                        brTpl.BaseStream.Position = TPL.pixelsOffset;
-                        if (TPL.bitDepth == 8)
-                        {
-                            pixels.Add(brTpl.ReadBytes((TPL.width * TPL.height) / 2));
-                        }
-                        else
-                        {
-                            pixels.Add(brTpl.ReadBytes(TPL.width * TPL.height));
-                        }
-
-                        // Get all palettes [textures]
-                        brTpl.BaseStream.Position = TPL.paletteOffset;
-                        if (TPL.bitDepth == 8)
-                        {
-                            palettes.Add(brTpl.ReadBytes(0x80));
-                        }
-                        else
-                        {
-                            palettes.Add(brTpl.ReadBytes(0x400));
-                        }
-
-                        // Get all pixels [mipmaps]
-                        for (int i = 0; i < TPL.mipmapCount; i++)
-                        {
-                            if (i == 0)
-                            {
-                                brTpl.BaseStream.Position = TPL.mipmapOffset1;
-                                MipMap.width = brTpl.ReadUInt16();
-                                MipMap.height = brTpl.ReadUInt16();
-                                brTpl.BaseStream.Position = TPL.mipmapOffset1 + 0x20;
-                                brTpl.BaseStream.Position = brTpl.ReadUInt32();
-
-                                if (TPL.bitDepth == 8)
-                                {
-                                    mipmapPixels.Add(brTpl.ReadBytes((MipMap.width * MipMap.height) / 2));
-                                }
-                                else
-                                {
-                                    mipmapPixels.Add(brTpl.ReadBytes(MipMap.width * MipMap.height));
-                                }
-                            }
-                            else
-                            {
-                                brTpl.BaseStream.Position = TPL.mipmapOffset2;
-                                MipMap.width = brTpl.ReadUInt16();
-                                MipMap.height = brTpl.ReadUInt16();
-                                brTpl.BaseStream.Position = TPL.mipmapOffset2 + 0x20;
-                                brTpl.BaseStream.Position = brTpl.ReadUInt32();
-
-                                if (TPL.bitDepth == 8)
-                                {
-                                    mipmapPixels.Add(brTpl.ReadBytes((MipMap.width * MipMap.height) / 2));
-                                }
-                                else
-                                {
-                                    mipmapPixels.Add(brTpl.ReadBytes(MipMap.width * MipMap.height));
-                                }
-                            }
-                        }
-                    }
-                    brTpl.Close();
+                    AddTplFile(file, headers, pixels, palettes);
                 }
+                else
+                {
+                    AddImageFile(file, headers, pixels, palettes);
+                }
+            }
 
-                // -----------------
-                // WRITES NEW MERGED TPL
-                // -----------------
-                BinaryWriter bw = new BinaryWriter(File.Open(filepath, FileMode.Create));
+            // --- Agora, reabre para escrever o novo TPL ---
+            using (BinaryWriter bw = new BinaryWriter(File.Open(filepath, FileMode.Create, FileAccess.Write)))
+            {
                 bw.Write(topPart);
 
-                // Updates texture count
+                // Atualiza contador de texturas
                 bw.BaseStream.Position = 0x04;
-                bw.Write(topPart[4] + headers.Count);
+                bw.Write((uint)(tplCountOriginal + headers.Count)); // corrigido!
+
                 bw.BaseStream.Position = bw.BaseStream.Length;
 
-                // Write headers
-                for (int header = 0; header < headers.Count; header++)
-                {
-                    bw.Write(headers[header]);
-                }
+                // Headers
+                foreach (var h in headers)
+                    bw.Write(h);
 
-                // Write mipmap headers
-                if (includeMipmapToolStripMenuItem.Checked && totalMipmaps > 0)
-                {
-                    bw.Write(mipmapHeaders[0]);
-                }
-
+                // Parte de dados anterior
                 bw.Write(bottomPart);
 
-                // Write pixels and palettes
+                // Novos pixels e paletas
                 for (int i = 0; i < pixels.Count; i++)
                 {
                     bw.Write(pixels[i]);
                     bw.Write(palettes[i]);
                 }
+            }
 
-                // Write mipmap pixels
-                if (includeMipmapToolStripMenuItem.Checked && totalMipmaps > 0)
+            UpdateAllOffsets(filepath);
+            FillTable();
+        }
+
+        private void AddTplFile(string path, List<byte[]> headers, List<byte[]> pixels, List<byte[]> palettes)
+        {
+            using (BinaryReader br = new BinaryReader(File.Open(path, FileMode.Open)))
+            {
+                br.BaseStream.Position = 0x00;
+                uint magic = br.ReadUInt32();
+                uint tplCount = br.ReadUInt32();
+                uint startOffset = br.ReadUInt32();
+                uint unused1 = br.ReadUInt32();
+
+                for (int texture = 0; texture < tplCount; texture++)
                 {
-                    for (int i = 0; i < mipmapPixels.Count; i++)
-                    {
-                        bw.Write(mipmapPixels[i]);
-                    }
-                }
+                    // Lê o header
+                    br.BaseStream.Position = 0x10 + (texture * 0x30);
+                    byte[] header = br.ReadBytes(0x30);
 
-                bw.Close();
-                UpdateAllOffsets(filepath);
-                FillTable();
+                    // Lê valores importantes do header
+                    ushort width = BitConverter.ToUInt16(header, 0x00);
+                    ushort height = BitConverter.ToUInt16(header, 0x02);
+                    ushort bitDepth = BitConverter.ToUInt16(header, 0x04);
+                    uint pixelsOffset = BitConverter.ToUInt32(header, 0x20);
+                    uint paletteOffset = BitConverter.ToUInt32(header, 0x24);
+
+                    // Adiciona o header
+                    headers.Add(header);
+
+                    // Lê os pixels
+                    br.BaseStream.Position = pixelsOffset;
+                    byte[] pixelData;
+
+                    if (bitDepth == 0x8) // 4bpp
+                        pixelData = br.ReadBytes((width * height) / 2);
+                    else if (bitDepth == 0x9) // 8bpp
+                        pixelData = br.ReadBytes(width * height);
+                    else
+                        throw new NotSupportedException($"Unsupported bit depth {bitDepth:X}");
+
+                    pixels.Add(pixelData);
+
+                    // Lê a paleta
+                    br.BaseStream.Position = paletteOffset;
+                    byte[] paletteData;
+
+                    if (bitDepth == 0x8)
+                        paletteData = br.ReadBytes(0x80);
+                    else if (bitDepth == 0x9)
+                        paletteData = br.ReadBytes(0x400);
+                    else
+                        paletteData = new byte[0];
+
+                    palettes.Add(paletteData);
+                }
             }
         }
+        private void AddImageFile(string path, List<byte[]> headers, List<byte[]> pixels, List<byte[]> palettes)
+        {
+            int bitsPerPixel = ImageHelper.GetImageBitDepth(path);
+            using (Bitmap bitmap = new Bitmap(path))
+            {
+                int width = bitmap.Width;
+                int height = bitmap.Height;
+
+                // Pega a profundidade de bits da imagem
+
+                // Decide a quantidade de cores com base nos bits
+                int colorCount = (bitsPerPixel <= 4) ? 16 : 256;
+
+                // Quantiza a imagem para o número correto de cores
+                IColorQuantizer colorQuantizer = new OctreeQuantizer();
+                Bitmap quantized = (Bitmap)ImageBuffer.QuantizeImage(bitmap, colorQuantizer, colorCount, 4);
+
+                // --- Resto do processamento (igual ao que já montamos) ---
+                Color[] paletteColors = quantized.Palette.Entries.Take(colorCount).ToArray();
+                byte[] paletteData = new byte[colorCount == 16 ? 0x80 : 0x400];
+
+                for (int i = 0; i < paletteColors.Length; i++)
+                {
+                    Color color = paletteColors[i];
+                    paletteData[i * 4 + 0] = color.R;
+                    paletteData[i * 4 + 1] = color.G;
+                    paletteData[i * 4 + 2] = color.B;
+                    paletteData[i * 4 + 3] = (byte)(color.A * 0x80 / 0xFF);
+                }
+
+                if (colorCount == 16)
+                {
+                    Array.Copy(paletteData, 0, paletteData, 0x40, 0x20);
+                }
+
+                else if (colorCount == 256)
+                {
+                    paletteData = new byte[0x400]; // 256 cores * 4 bytes cada
+
+                    int dstOffset = 0;
+
+                    for (int i = 0; i < paletteColors.Length; i++) // 32 cores por chunk
+                    {
+                        Color color = paletteColors[i];
+
+                        paletteData[dstOffset++] = color.R;
+                        paletteData[dstOffset++] = color.G;
+                        paletteData[dstOffset++] = color.B;
+                        paletteData[dstOffset++] = (byte)(color.A * 0x80 / 0xFF); // Ajuste do Alpha (0x80 = 100%)
+                    }
+
+                }
+
+                List<byte> pixelData = new List<byte>();
+
+                if (colorCount == 16)
+                {
+                    pixelData = new List<byte>();
+                    for (int y = quantized.Height - 1; y >= 0; y--) // bottom-up
+                    {
+                        for (int x = 0; x < quantized.Width; x += 2)
+                        {
+                            // Pega 2 pixels de uma vez
+                            Color pixel1Color = quantized.GetPixel(x, y);
+                            byte pixel1Index = TplHelper.FindPaletteIndex(pixel1Color, paletteColors);
+
+                            Color pixel2Color = Color.Black;
+                            byte pixel2Index = 0;
+
+                            if (x + 1 < quantized.Width)
+                            {
+                                pixel2Color = quantized.GetPixel(x + 1, y);
+                                pixel2Index = TplHelper.FindPaletteIndex(pixel2Color, paletteColors);
+                            }
+
+                            byte packed = (byte)((pixel2Index << 4) | (pixel1Index & 0x0F)); // SWAPPED!
+                            pixelData.Add(packed);
+                        }
+                    }
+
+                }
+                else
+                {
+                    pixelData = new List<byte>();
+
+                    int blockWidth = 16;
+
+                    for (int y = quantized.Height - 2; y >= 0; y -= 2)
+                    {
+                        for (int x = 0; x < quantized.Width; x += blockWidth)
+                        {
+                            for (int inner = 0; inner < blockWidth; inner++)
+                            {
+                                int px = x + inner;
+
+                                if (px < quantized.Width && (y + 1) < quantized.Height)
+                                {
+                                    Color colorTop = quantized.GetPixel(px, y + 1);
+                                    byte idxTop = TplHelper.FindPaletteIndex(colorTop, paletteColors);
+                                    pixelData.Add(idxTop);
+                                }
+
+                                if (px < quantized.Width && y >= 0)
+                                {
+                                    Color colorBottom = quantized.GetPixel(px, y);
+                                    byte idxBottom = TplHelper.FindPaletteIndex(colorBottom, paletteColors);
+                                    pixelData.Add(idxBottom);
+                                }
+                            }
+                        }
+                    }
+
+                }
+
+                // Header correto
+                byte[] header = new byte[0x30];
+                using (MemoryStream ms = new MemoryStream(header))
+                using (BinaryWriter bw = new BinaryWriter(ms))
+                {
+                    bw.Write((ushort)width);
+                    bw.Write((ushort)height);
+                    bw.Write((ushort)(colorCount == 16 ? 0x8 : 0x9)); // bitDepth
+                    bw.Write((ushort)0x2); // interlace
+                    bw.Write((ushort)0x100); // zPriority
+                    bw.Write((ushort)0x0); // mipmapCount
+                    bw.Write((ushort)((width * height) / (colorCount == 16 ? 32 : 16))); // scale
+                    bw.Write((ushort)0); // unused2
+
+                    bw.Write((uint)0); // mipmapOffset1
+                    bw.Write((uint)0); // mipmapOffset2
+                    bw.Write((uint)0); // unk1
+                    bw.Write((uint)0); // unk2
+
+                    bw.Write((uint)0); // pixelsOffset placeholder
+                    bw.Write((uint)0); // paletteOffset placeholder
+
+                    bw.Write((byte)0); // unused3
+
+                    bw.Write((byte)(width > 128 ? 0x00 : 0x80)); // config1
+                    if (width > 128)
+                        bw.Write((byte)(0x40 + (width / 16)));
+                    else
+                        bw.Write((byte)0x40);
+
+                    ushort config3 = 1229;
+                    for (int m = 0; m < 8; m++)
+                    {
+                        if (width != Math.Pow(2, 3 + m)) config3 += 4;
+                        else break;
+                    }
+                    for (int m = 0; m < 8; m++)
+                    {
+                        if (height != Math.Pow(2, 3 + m)) config3 += 0x40;
+                        else break;
+                    }
+                    bw.Write(config3);
+
+                    bw.Write((byte)0); // unused4
+                    bw.Write((byte)0); // unused5
+                    bw.Write((byte)0x40); // endTag
+                }
+
+                headers.Add(header);
+                pixels.Add(pixelData.ToArray());
+                palettes.Add(paletteData);
+            }
+        }
+
         private void CompileFromFolder()
         {
             // Folder Dialog
             CommonOpenFileDialog folderDialog = new CommonOpenFileDialog();
             folderDialog.IsFolderPicker = true;
-            folderDialog.ShowDialog();
+                folderDialog.Title = "Select folder containing indexed PNG files (0.png, 1.png, 2.png, ...)";
+            if (folderDialog.ShowDialog() != CommonFileDialogResult.Ok) return;
 
             if (folderDialog.FileName != "")
             {
@@ -779,116 +814,16 @@ namespace RE4_PS2_TPL_Manager
                     bw.Write((long)0x00);
                 }
                 bw.Close();
+                UpdateStatusText($"TPL compiled successfully: Compiled/{new DirectoryInfo(folderDialog.FileName).Name}.tpl");
             }
         }
         private void ReadTexture(string tplFile, int textureIndex)
         {
-            BinaryReader br = new BinaryReader(File.Open(tplFile, FileMode.Open));
-            TPL.magic = br.ReadUInt32();
-            TPL.tplCount = br.ReadUInt32();
-            TPL.startOffset = br.ReadUInt32();
-            TPL.unused1 = br.ReadUInt32();
-
-            // Get every parameter
-            br.BaseStream.Position = 0x10 + (0x30 * textureIndex);
-            TPL.width = br.ReadUInt16();
-            TPL.height = br.ReadUInt16();
-            TPL.bitDepth = br.ReadUInt16();
-            TPL.interlace = br.ReadUInt16();
-            TPL.zPriority = br.ReadUInt16();
-            TPL.mipmapCount = br.ReadUInt16();
-            TPL.scale = br.ReadUInt16();
-            TPL.unused2 = br.ReadUInt16();
-
-            TPL.mipmapOffset1 = br.ReadUInt32();
-            TPL.mipmapOffset2 = br.ReadUInt32();
-            TPL.unknown1 = br.ReadUInt32();
-            TPL.unknown2 = br.ReadUInt32();
-
-            TPL.pixelsOffset = br.ReadUInt32();
-            TPL.paletteOffset = br.ReadUInt32();
-            TPL.unused3 = br.ReadByte();
-            TPL.config1 = br.ReadByte();
-            TPL.config2 = br.ReadByte();
-            TPL.config3 = br.ReadUInt16();
-            TPL.unused4 = br.ReadByte();
-            TPL.unused5 = br.ReadByte();
-            TPL.endTag = br.ReadByte();
-
-            // Get whole header into a byte array
-            br.BaseStream.Position = 0x10 + (0x30 * textureIndex);
-            TPL.header = br.ReadBytes(0x30);
-
-            // Get pixels indices and palette
-            br.BaseStream.Position = TPL.pixelsOffset;
-            if (TPL.bitDepth == 8)
-            {
-                TPL.pixels = br.ReadBytes((TPL.width * TPL.height) / 2);
-                br.BaseStream.Position = TPL.paletteOffset;
-                TPL.palette = br.ReadBytes(0x80);
-            }
-            else if (TPL.bitDepth == 9)
-            {
-                TPL.pixels = br.ReadBytes(TPL.width * TPL.height);
-                br.BaseStream.Position = TPL.paletteOffset;
-                TPL.palette = br.ReadBytes(0x400);
-            }
-            else
-            {
-                TPL.pixels = br.ReadBytes(TPL.width * TPL.height);
-            }
-
-            // Get mipmap headers and pixels
-            if (TPL.mipmapCount > 0)
-            {
-                // Get header 1
-                br.BaseStream.Position = TPL.mipmapOffset1;
-                TPL.mipmapHeader1 = br.ReadBytes(0x30);
-
-                // Get pixels 1
-                br.BaseStream.Position = TPL.mipmapOffset1;
-                MipMap.width = br.ReadUInt16();
-                MipMap.height = br.ReadUInt16();
-                MipMap.bitDepth = br.ReadUInt16();
-
-                br.BaseStream.Position = TPL.mipmapOffset1 + 0x20;
-                MipMap.pixelsOffset = br.ReadUInt32();
-
-                br.BaseStream.Position = MipMap.pixelsOffset;
-                if (MipMap.bitDepth == 8)
-                {
-                    TPL.mipmapPixels1 = br.ReadBytes((MipMap.width * MipMap.height) / 2);
-                }
-                else if (MipMap.bitDepth == 9 || MipMap.bitDepth == 6)
-                {
-                    TPL.mipmapPixels1 = br.ReadBytes(MipMap.width * MipMap.height);
-                }
-
-                // Get header 2
-                br.BaseStream.Position = TPL.mipmapOffset2;
-                TPL.mipmapHeader2 = br.ReadBytes(0x30);
-
-                // Get pixels 2
-                br.BaseStream.Position = TPL.mipmapOffset2;
-                MipMap.width = br.ReadUInt16();
-                MipMap.height = br.ReadUInt16();
-                MipMap.bitDepth = br.ReadUInt16();
-
-                br.BaseStream.Position = TPL.mipmapOffset2 + 0x20;
-                MipMap.pixelsOffset = br.ReadUInt32();
-
-                br.BaseStream.Position = MipMap.pixelsOffset;
-                if (MipMap.bitDepth == 8)
-                {
-                    TPL.mipmapPixels2 = br.ReadBytes((MipMap.width * MipMap.height) / 2);
-                }
-                else if (MipMap.bitDepth == 9 || MipMap.bitDepth == 6)
-                {
-                    TPL.mipmapPixels2 = br.ReadBytes(MipMap.width * MipMap.height);
-                }
-
-            }
-            br.Close();
+            TPL = tplReader.ReadTexture(tplFile, textureIndex);
+        }
+        private void ReadTexture(BinaryReader br, int textureIndex)
+        {
+            TPL = tplReader.ReadTexture(br, textureIndex);
         }
         private void WriteTexture(int rowNumber)
         {
@@ -985,6 +920,15 @@ namespace RE4_PS2_TPL_Manager
             statusStrip1.Invalidate();
             statusStrip1.Refresh();
         }
+        private void UpdateTextureSelectionStatus(int rowIndex)
+        {
+            if (rowIndex < 0 || rowIndex >= table.Rows.Count) return;
+            DataGridViewRow row = table.Rows[rowIndex];
+            string width = row.Cells[2].Value?.ToString() ?? "?";
+            string height = row.Cells[3].Value?.ToString() ?? "?";
+            string depth = row.Cells[4].Value?.ToString() ?? "?";
+            UpdateStatusText($"Texture {rowIndex} selected  •  {width}×{height}  •  {depth}");
+        }
         private void CreateTable()
         {
             table.Columns.Clear();
@@ -996,18 +940,17 @@ namespace RE4_PS2_TPL_Manager
             table.Columns.Insert(0, thumbnail);
 
             table.Columns.Add("title", "Title"); // 1
+            table.Columns[1].ReadOnly = true;
             table.Columns.Add("width", "Width"); // 2
             table.Columns.Add("height", "Height"); // 3
 
-            DataGridViewComboBoxColumn bitDepth = new DataGridViewComboBoxColumn();
-            bitDepth.Name = "bitDepth";
-            bitDepth.HeaderText = "Bit Depth";
-            table.Columns.Insert(4, bitDepth);
+            // Metadata columns are display-only. Changing these values without converting the
+            // underlying pixel/CLUT data can make the TPL header inconsistent with its payload.
+            table.Columns.Add("bitDepth", "Bit Depth"); // 4
+            table.Columns[4].ReadOnly = true;
 
-            DataGridViewComboBoxColumn interlace = new DataGridViewComboBoxColumn();
-            interlace.Name = "interlace";
-            interlace.HeaderText = "Interlace";
-            table.Columns.Insert(5, interlace);
+            table.Columns.Add("interlace", "Interlace"); // 5
+            table.Columns[5].ReadOnly = true;
 
             table.Columns.Add("baseResolution", "Z-Priority"); // 6
             table.Columns.Add("mipmapCount", "Mipmaps"); // 7
@@ -1049,100 +992,78 @@ namespace RE4_PS2_TPL_Manager
 
             // Create table columns
             CreateTable();
-            ShowThumbnails();
 
-            BinaryReader br = new BinaryReader(File.Open(filepath, FileMode.Open));
-            string folderName = Path.GetFileNameWithoutExtension(filepath);
+            uint texturesTotal;
 
-            br.BaseStream.Position = 0x04;
-            uint texturesTotal = br.ReadUInt32();
-            br.Close();
-
-            // Status bar
-            UpdateStatusText($"Loading {texturesTotal} textures, please wait...");
-            progressBar.Maximum = (int)texturesTotal;
-            progressBar.Value = 0;
-
-            for (int i = 0; i < texturesTotal; i++)
+            // Abre o arquivo uma vez e mantém o fluxo até terminar tudo
+            using (BinaryReader br = new BinaryReader(File.Open(filepath, FileMode.Open)))
             {
-                progressBar.Value++;
-                statusStrip1.Invalidate();
-                statusStrip1.Refresh();
+                br.BaseStream.Position = 0x04;
+                texturesTotal = br.ReadUInt32();
 
-                // Returns to header position on each iteration
-                ReadTexture(filepath, i);
+                // Status bar
+                UpdateStatusText($"Loading {texturesTotal} textures, please wait...");
+                progressBar.Maximum = (int)texturesTotal;
+                progressBar.Value = 0;
 
-                // Generating image thumbnail
-                Image thumbnail;
-                if (TPL.bitDepth == 8)
+                for (int i = 0; i < texturesTotal; i++)
                 {
-                    thumbnail = Image.FromFile(".temp/" + folderName + "/" + i + "_16.bmp");
-                }
-                else
-                {
-                    thumbnail = Image.FromFile(".temp/" + folderName + "/" + i + "_256.bmp");
-                }
+                    progressBar.Value++;
+                    statusStrip1.Invalidate();
+                    statusStrip1.Refresh();
 
-                // Create combobox of bit depth and interlace modes
-                DataGridViewComboBoxCell cbBitDepth = new DataGridViewComboBoxCell();
-                cbBitDepth.Items.AddRange(TPLClass.BitDepthDict.Keys.ToArray()[0]);
-                DataGridViewComboBoxCell cbInterlace = new DataGridViewComboBoxCell();
-                cbInterlace.Items.AddRange(TPLClass.InterlaceDict.Keys.ToArray()[0]);
+                    ReadTexture(br, i);
 
-                // Bit depth selected value
-                string GetBitDepth()
-                {
-                    string temp = "";
-                    for (int x = 0; x < TPLClass.BitDepthDict.Values.ToArray()[0].Length; x++)
+                    Bitmap bmp = textureDecoder.Decode(TPL, br);
+
+                    string GetBitDepth()
                     {
-                        if (TPL.bitDepth == TPLClass.BitDepthDict.Values.ToArray()[0][x])
+                        for (int x = 0; x < TPLClass.BitDepthDict.Values.ToArray()[0].Length; x++)
                         {
-                            temp = TPLClass.BitDepthDict.Keys.ToArray()[0][x];
+                            if (TPL.bitDepth == TPLClass.BitDepthDict.Values.ToArray()[0][x])
+                                return TPLClass.BitDepthDict.Keys.ToArray()[0][x];
                         }
+                        return "";
                     }
-                    return temp;
-                }
 
-                // Interlace selected value
-                string GetInterlace()
-                {
-                    string temp = "";
-                    for (int x = 0; x < TPLClass.InterlaceDict.Values.ToArray()[0].Length; x++)
+                    string GetInterlace()
                     {
-                        if (TPL.interlace == TPLClass.InterlaceDict.Values.ToArray()[0][x])
+                        for (int x = 0; x < TPLClass.InterlaceDict.Values.ToArray()[0].Length; x++)
                         {
-                            temp = TPLClass.InterlaceDict.Keys.ToArray()[0][x];
+                            if (TPL.interlace == TPLClass.InterlaceDict.Values.ToArray()[0][x])
+                                return TPLClass.InterlaceDict.Keys.ToArray()[0][x];
                         }
+                        return "";
                     }
-                    return temp;
-                }
 
-                // Adding rows
-                var index = table.Rows.Add();
-                table.Rows[index].Cells[0].Value = new Bitmap(thumbnail);
-                table.Rows[index].Cells[1].Value = $"{i}.tpl";
-                table.Rows[index].Cells[2].Value = TPL.width;
-                table.Rows[index].Cells[3].Value = TPL.height;
-                table.Rows[index].Cells[4] = cbBitDepth;
-                table.Rows[index].Cells[4].Value = GetBitDepth();
-                table.Rows[index].Cells[5] = cbInterlace;
-                table.Rows[index].Cells[5].Value = GetInterlace();
-                table.Rows[index].Cells[6].Value = TPL.zPriority;
-                table.Rows[index].Cells[7].Value = TPL.mipmapCount;
-                table.Rows[index].Cells[8].Value = TPL.scale;
-                table.Rows[index].Cells[9].Value = TPL.config1;
-                table.Rows[index].Cells[10].Value = TPL.config2;
-                table.Rows[index].Cells[11].Value = TPL.config3;
-                // Disabling edit
-                table.Rows[index].Cells[2].ReadOnly = true;
-                table.Rows[index].Cells[3].ReadOnly = true;
-                table.Rows[index].Cells[7].ReadOnly = true;
-                table.Rows[index].Cells[9].ReadOnly = true;
-                table.Rows[index].Cells[10].ReadOnly = true;
-                table.Rows[index].Cells[11].ReadOnly = true;
-                thumbnail.Dispose();
+                    // Adiciona a linha na tabela
+                    var index = table.Rows.Add();
+                    table.Rows[index].Cells[0].Value = bmp;
+                    table.Rows[index].Cells[1].Value = $"{i}.tpl";
+                    table.Rows[index].Cells[2].Value = TPL.width;
+                    table.Rows[index].Cells[3].Value = TPL.height;
+                    table.Rows[index].Cells[4].Value = GetBitDepth();
+                    table.Rows[index].Cells[5].Value = GetInterlace();
+                    table.Rows[index].Cells[6].Value = TPL.zPriority;
+                    table.Rows[index].Cells[7].Value = TPL.mipmapCount;
+                    table.Rows[index].Cells[8].Value = TPL.scale;
+                    table.Rows[index].Cells[9].Value = TPL.config1;
+                    table.Rows[index].Cells[10].Value = TPL.config2;
+                    table.Rows[index].Cells[11].Value = TPL.config3;
+
+                    // Define colunas como somente leitura
+                    table.Rows[index].Cells[1].ReadOnly = true;
+                    table.Rows[index].Cells[2].ReadOnly = true;
+                    table.Rows[index].Cells[3].ReadOnly = true;
+                    table.Rows[index].Cells[4].ReadOnly = true;
+                    table.Rows[index].Cells[5].ReadOnly = true;
+                    table.Rows[index].Cells[7].ReadOnly = true;
+                    table.Rows[index].Cells[9].ReadOnly = true;
+                    table.Rows[index].Cells[10].ReadOnly = true;
+                    table.Rows[index].Cells[11].ReadOnly = true;
+                }
             }
-            lblStatusText.Text = texturesTotal + " textures loaded successfully";
+            UpdateStatusText(texturesTotal + " textures loaded successfully");
         }
         private void RefreshTable()
         {
@@ -1152,19 +1073,11 @@ namespace RE4_PS2_TPL_Manager
                 {
                     table.Rows.Clear();
                     table.Columns.Clear();
-                    try
-                    {
-                        //Directory.Delete(".temp", true);
-                        //Directory.CreateDirectory(".temp");
-                    }
-                    catch (Exception)
-                    {
-                    }
                     FillTable();
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
-                    // Optional error handling to be added
+                    UpdateStatusText("Could not refresh texture table: " + ex.Message);
                 }
             }
         }
@@ -1176,6 +1089,7 @@ namespace RE4_PS2_TPL_Manager
         }
         private void RemoveAll()
         {
+            EnsureBackup();
             try
             {
                 DialogResult confirmBoxResult = MessageBox.Show("Are you sure? This action cannot be undone.", "Question",
@@ -1190,7 +1104,7 @@ namespace RE4_PS2_TPL_Manager
                     bw.Close();
 
                     table.Rows.Clear();
-                    lblStatusText.Text = "All textures removed successfully";
+                    UpdateStatusText("All textures removed successfully");
                     progressBar.Value = progressBar.Maximum;
                 }
                 else
@@ -1199,12 +1113,14 @@ namespace RE4_PS2_TPL_Manager
                 }
 
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                UpdateStatusText("Could not remove textures: " + ex.Message);
             }
         }
         private void RemoveAllMipmaps()
         {
+            EnsureBackup();
             if (GetTotalMipmapCount() > 0)
             {
                 try
@@ -1293,219 +1209,184 @@ namespace RE4_PS2_TPL_Manager
             UpdateAllOffsets(filepath);
             FillTable();
         }
-        private void Replace(string tplFile, string replacerTpl = "", int dialogTextureIndex = 0, bool isTemp = false)
+        private void Replace(string tplFile, string replacerTpl = "", int dialogTextureIndex = 0, bool isTemp = false, bool isBatch = false, BatchColorDepthMode batchMode = BatchColorDepthMode.Preserve)
         {
+            EnsureBackup();
+            if (String.IsNullOrWhiteSpace(tplFile) || selectedRowIndexGlobal < 0) return;
+
             ReadTexture(tplFile, selectedRowIndexGlobal);
 
-            BinaryReader br = new BinaryReader(File.Open(tplFile, FileMode.Open));
-
-            // Stores fields
-            mipmapCount = TPL.mipmapCount;
-            mipmapOffset1 = TPL.mipmapOffset1;
-            mipmapOffset2 = TPL.mipmapOffset2;
-            mipmapUnk1 = TPL.unknown1;
-            mipmapUnk2 = TPL.unknown2;
-
-            // From the beginning to the start of the header
-            byte[] part1 = br.ReadBytes(0x10 + (0x30 * selectedRowIndexGlobal));
-            br.BaseStream.Position += 0x30;
-
-            // After the header to the start of the pixels chunk
-            byte[] part2 = br.ReadBytes((int)(TPL.pixelsOffset - br.BaseStream.Position));
-            br.BaseStream.Position += TPL.pixels.Length;
-
-            // After the pixels chunk to the start of the palette chunk
-            byte[] part3 = br.ReadBytes((int)(TPL.paletteOffset - br.BaseStream.Position));
-            br.BaseStream.Position += TPL.palette.Length;
-
-            // After the palette chunk to the end of the file
-            byte[] part4 = br.ReadBytes((int)(br.BaseStream.Length - br.BaseStream.Position));
-            br.Close();
-
-            OpenFileDialog fileDialog = new OpenFileDialog();
-            fileDialog.Filter = "RE4 PS2 TPL Files (*.tpl)|*.tpl|Image Files (*.png;*.bmp;*.tga)|*.png;*.bmp;*.tga";
-
-            if (!isTemp)
+            string selectedPath = replacerTpl;
+            if (!isTemp && !isBatch && String.IsNullOrWhiteSpace(selectedPath))
             {
-                fileDialog.ShowDialog();
-                replacerTpl = fileDialog.FileName;
+                using (OpenFileDialog fileDialog = new OpenFileDialog())
+                {
+                    fileDialog.Filter = "Image Files (*.png;*.bmp;*.tga)|*.png;*.bmp;*.tga|RE4 PS2 TPL Files (*.tpl)|*.tpl";
+                    if (fileDialog.ShowDialog() != DialogResult.OK) return;
+                    selectedPath = fileDialog.FileName;
+                }
             }
 
-            // Verifies which format imported file is 
-            if (Path.GetExtension(fileDialog.FileName).ToLower() == ".png" || Path.GetExtension(fileDialog.FileName).ToLower() == ".bmp")
+            if (String.IsNullOrWhiteSpace(selectedPath)) return;
+
+            string extension = Path.GetExtension(selectedPath).ToLowerInvariant();
+            if (extension == ".png" || extension == ".bmp" || extension == ".tga" || extension == ".jpg" || extension == ".jpeg")
             {
-                var image = new Bitmap(fileDialog.FileName);
-                string bitsPerPixel = image.PixelFormat.ToString();
-                int colorCount;
-
-                // If selected image has a bit depth greater than 8-bit, show this dialog
-                if (bitsPerPixel != "Format4bppIndexed" && bitsPerPixel != "Format8bppIndexed")
+                using (Bitmap image = LoadBitmapForImport(selectedPath))
                 {
-                    DialogGetColor dialogGetColor = new DialogGetColor();
-                    dialogGetColor.ShowDialog();
-                    colorCount = dialogGetColor.ColorCount;
-                }
-                else if (bitsPerPixel == "Format4bppIndexed")
-                {
-                    colorCount = 16;
-                }
-                else
-                {
-                    colorCount = 256;
-                }
-
-                // Create temporary .bmp for converting it directly to .tpl
-                IColorQuantizer colorQuantizer = new OctreeQuantizer();
-                Image target = ImageBuffer.QuantizeImage(new Bitmap(fileDialog.FileName), colorQuantizer, colorCount, 4);
-                target.Save($".temp/temp_{colorCount}.bmp", ImageFormat.Bmp);
-                target.Dispose();
-
-                ConverterBMP converterBMP = new ConverterBMP();
-                converterBMP.BMPtoTPL(new string[] { $".temp/temp_{colorCount}.bmp" }, true);
-                replacerTpl = $".temp/0_{colorCount}.tpl";
-            }
-
-            if (replacerTpl != "")
-            {
-                // Check if tpl contains multiple textures, then opens a dialog for selecting index
-                BinaryReader brTemp = new BinaryReader(File.Open(replacerTpl, FileMode.Open));
-                brTemp.BaseStream.Position += 4;
-                uint tplCount = brTemp.ReadUInt32();
-                brTemp.Close();
-
-                if (tplCount > 1)
-                {
-                    DialogGetIndex dialogGetIndex = new DialogGetIndex();
-                    dialogGetIndex.lblTplCount.Text = "of " + tplCount.ToString();
-                    dialogGetIndex.ShowDialog();
-                    dialogTextureIndex = dialogGetIndex.GetIndex();
-                }
-
-                BinaryReader br2 = new BinaryReader(File.Open(replacerTpl, FileMode.Open));
-                br2.BaseStream.Position = 0x10 + (0x30 * dialogTextureIndex);
-                ushort width = br2.ReadUInt16();
-                ushort height = br2.ReadUInt16();
-                ushort bitDepth = br2.ReadUInt16();
-
-                br2.BaseStream.Position = 0x30 + (0x30 * dialogTextureIndex);
-                uint pixelsOffset = br2.ReadUInt32();
-                uint paletteOffset = br2.ReadUInt32();
-
-                // Get header
-                br2.BaseStream.Position = 0x10 + (0x30 * dialogTextureIndex);
-                byte[] header = br2.ReadBytes(0x30);
-                byte[] pixels = null;
-                byte[] palette = null;
-
-                // Get pixels indices
-                br2.BaseStream.Position = pixelsOffset;
-                if (bitDepth == 8)
-                {
-                    pixels = br2.ReadBytes(width * height / 2);
-                }
-                else if (bitDepth == 9 || bitDepth == 6)
-                {
-                    pixels = br2.ReadBytes(width * height);
-                }
-                Console.WriteLine("Width: " + width.ToString());
-                Console.WriteLine("Height: " + height.ToString());
-                Console.WriteLine("Pixels: " + pixels.ToString());
-                // Get palette
-                br2.BaseStream.Position = paletteOffset;
-                if (bitDepth == 8)
-                {
-                    palette = br2.ReadBytes(width * height / 2);
-                }
-                else if (bitDepth == 9 || bitDepth == 6)
-                {
-                    palette = br2.ReadBytes(width * height);
-                }
-                br2.Close();
-
-                // Overwrite .tpl and replace texture
-                BinaryWriter bw = new BinaryWriter(File.Open(tplFile, FileMode.Create));
-                bw.Write(part1);
-                bw.Write(header);
-                bw.Write(part2);
-                bw.Write(pixels);
-                bw.Write(part3);
-                bw.Write(palette);
-                bw.Write(part4);
-                bw.Close();
-
-                // Ask the user to also replace mipmaps
-                if (table.Rows[selectedRowIndexGlobal].Cells[7].Value.ToString() == "2")
-                {
-                    DialogResult result = MessageBox.Show("Do you want to update mipmaps with this texture as well?\n" +
-                        "(it will be resized automatically).", "Mipmaps detected", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
-                    if (result == DialogResult.Yes)
+                    // Interactive replace may ask which target palette size to use for true-color images.
+                    // Batch replace must never ask per texture: preserve the color depth of the destination.
+                    int colorCount;
+                    if (isBatch)
                     {
-                        ReplaceMipmaps();
+                        switch (batchMode)
+                        {
+                            case BatchColorDepthMode.Force4Bit:
+                                colorCount = 16;
+                                break;
+                            case BatchColorDepthMode.Force8Bit:
+                                colorCount = 256;
+                                break;
+                            default:
+                                colorCount = TPL.bitDepth == 0x08 ? 16 : 256;
+                                break;
+                        }
                     }
-                    else return;
+                    else
+                    {
+                        colorCount = GetImportColorCount(image);
+                    }
+
+                    TPLDefinition.TPL destination = tplReader.ReadTexture(tplFile, selectedRowIndexGlobal);
+                    TPLDefinition.TPL replacement = textureEncoder.EncodeImage(image, colorCount, destination.interlace);
+                    tplWriter.ReplaceTexture(tplFile, selectedRowIndexGlobal, replacement);
                 }
-                UpdateStatusText("Texture replaced successfully");
-                UpdateAllOffsets(tplFile);
-                RefreshTable();
+            }
+            else if (extension == ".tpl")
+            {
+                uint tplCount = tplReader.ReadTextureCount(selectedPath);
+                if (tplCount > 1 && !isBatch)
+                {
+                    using (DialogGetIndex dialogGetIndex = new DialogGetIndex())
+                    {
+                        dialogGetIndex.lblTplCount.Text = "of " + tplCount;
+                        if (dialogGetIndex.ShowDialog() != DialogResult.OK) return;
+                        dialogTextureIndex = dialogGetIndex.GetIndex();
+                    }
+                }
+                tplWriter.ReplaceTexture(tplFile, selectedRowIndexGlobal, selectedPath, dialogTextureIndex);
+            }
+            else
+            {
+                MessageBox.Show("Unsupported replacement file format.", "Replace", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+                return;
+            }
+
+            // Ask the user to also replace mipmaps. A 'No' answer must not skip table refresh.
+            if (!isBatch && table.Rows.Count > selectedRowIndexGlobal && table.Rows[selectedRowIndexGlobal].Cells[7].Value?.ToString() == "2")
+            {
+                DialogResult result = MessageBox.Show("Do you want to update mipmaps with this texture as well?\n" +
+                    "(it will be resized automatically).", "Mipmaps detected", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+                if (result == DialogResult.Yes) ReplaceMipmaps();
+            }
+
+            UpdateStatusText("Texture replaced successfully");
+            if (!isBatch) RefreshTableAndKeepSelection(selectedRowIndexGlobal);
+        }
+
+        private Bitmap LoadBitmapForImport(string path)
+        {
+            if (Path.GetExtension(path).Equals(".tga", StringComparison.OrdinalIgnoreCase))
+            {
+                TGASharpLib.TGA tga = new TGASharpLib.TGA(path);
+                return new Bitmap(tga.ToBitmap());
+            }
+            using (Image source = Image.FromFile(path)) return new Bitmap(source);
+        }
+
+        private int GetImportColorCount(Bitmap image)
+        {
+            if (image.PixelFormat == PixelFormat.Format4bppIndexed) return 16;
+            if (image.PixelFormat == PixelFormat.Format8bppIndexed) return 256;
+
+            using (DialogGetColor dialogGetColor = new DialogGetColor())
+            {
+                dialogGetColor.ShowDialog();
+                return dialogGetColor.ColorCount == 16 ? 16 : 256;
             }
         }
+
+        private void ReplaceCurrentPreviewAtColorDepth(int colorCount)
+        {
+            EnsureBackup();
+            if (String.IsNullOrWhiteSpace(filepath) || table.Rows.Count == 0 || selectedRowIndexGlobal < 0) return;
+            Image preview = table.Rows[selectedRowIndexGlobal].Cells[0].Value as Image;
+            if (preview == null) return;
+
+            TPLDefinition.TPL destination = tplReader.ReadTexture(filepath, selectedRowIndexGlobal);
+            TPLDefinition.TPL replacement = textureEncoder.EncodeImage(preview, colorCount, destination.interlace);
+            tplWriter.ReplaceTexture(filepath, selectedRowIndexGlobal, replacement);
+            UpdateStatusText(colorCount == 256 ? "Color depth increased to 256 colors" : "Color depth decreased to 16 colors");
+            RefreshTableAndKeepSelection(selectedRowIndexGlobal);
+        }
+
+        private void RefreshTableAndKeepSelection(int index)
+        {
+            RefreshTable();
+            if (table.Rows.Count == 0) return;
+            int safeIndex = Math.Max(0, Math.Min(index, table.Rows.Count - 1));
+            selectedRowIndexGlobal = safeIndex;
+            table.ClearSelection();
+            table.Rows[safeIndex].Selected = true;
+            texturePreview.Image = table.Rows[safeIndex].Cells[0].Value as Bitmap;
+        }
+
         private void ReplaceMipmaps()
         {
-            // ============
-            // This method needs optimization/refactoring
-            // ============
-
             ReadTexture(filepath, selectedRowIndexGlobal);
-            uint MipMapHeaderOffset = 0;
+            if (texturePreview.Image == null || TPL.mipmapCount == 0) return;
 
-            for (int mip = 0; mip < 2; mip++)
+            uint[] mipmapOffsets = { TPL.mipmapOffset1, TPL.mipmapOffset2 };
+            int mipmapSlots = Math.Min((int)TPL.mipmapCount, mipmapOffsets.Length);
+
+            using (FileStream stream = File.Open(filepath, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+            using (BinaryReader reader = new BinaryReader(stream, System.Text.Encoding.Default, true))
+            using (BinaryWriter writer = new BinaryWriter(stream, System.Text.Encoding.Default, true))
             {
-                // Read mipmap 1 header
-                BinaryReader br = new BinaryReader(File.OpenRead(filepath));
-                switch (mip)
+                for (int mip = 0; mip < mipmapSlots; mip++)
                 {
-                    case 0:
-                        MipMapHeaderOffset = TPL.mipmapOffset1;
-                        break;
-                    case 1:
-                        MipMapHeaderOffset = TPL.mipmapOffset2;
-                        break;
-                    default:
-                        break;
+                    uint headerOffset = mipmapOffsets[mip];
+                    if (headerOffset == 0 || headerOffset + 0x24 > stream.Length) continue;
+
+                    stream.Position = headerOffset;
+                    ushort width = reader.ReadUInt16();
+                    ushort height = reader.ReadUInt16();
+                    ushort bitDepth = reader.ReadUInt16();
+                    ushort interlace = reader.ReadUInt16();
+                    stream.Position = headerOffset + 0x20;
+                    uint pixelsOffset = reader.ReadUInt32();
+
+                    if (width == 0 || height == 0 || pixelsOffset >= stream.Length) continue;
+
+                    int colorCount = bitDepth == 0x09 ? 256 : 16;
+                    using (Bitmap resized = new Bitmap(texturePreview.Image, width, height))
+                    {
+                        TPLDefinition.TPL encoded = textureEncoder.EncodeImage(resized, colorCount, interlace);
+                        int expectedLength = TplReader.GetPixelDataLength(width, height, bitDepth);
+                        if (encoded.pixels.Length != expectedLength)
+                            throw new InvalidDataException("Encoded mipmap size does not match the existing mipmap payload.");
+                        if ((long)pixelsOffset + expectedLength > stream.Length)
+                            throw new InvalidDataException("Mipmap pixel range is outside the TPL file.");
+
+                        stream.Position = pixelsOffset;
+                        writer.Write(encoded.pixels);
+                    }
                 }
-                br.BaseStream.Position = MipMapHeaderOffset;
-                MipMap.width = br.ReadUInt16();
-                MipMap.height = br.ReadUInt16();
-                MipMap.bitDepth = br.ReadUInt16();
-                MipMap.interlace = br.ReadUInt16();
-                br.BaseStream.Position = MipMapHeaderOffset + 0x20;
-                MipMap.pixelsOffset = br.ReadUInt32();
-                br.Close();
-                Console.WriteLine(MipMap.width);
-                Console.WriteLine(MipMap.height);
-                // Generates smaller version of the image in the preview window
-                IColorQuantizer colorQuantizer = new OctreeQuantizer();
-                Image a = new Bitmap(texturePreview.Image, MipMap.width, MipMap.height);
-                Image target = ImageBuffer.QuantizeImage(a, colorQuantizer, 16, 4);
-                target.Save($".temp/temp_{16}.bmp", ImageFormat.Bmp);
-                target.Dispose();
-
-                // Get pixels from new generated image
-                BinaryReader brBmp = new BinaryReader(File.OpenRead($".temp/temp_{16}.bmp"));
-                brBmp.BaseStream.Position = 0x0A;
-                brBmp.BaseStream.Position = brBmp.ReadUInt32();
-                byte[] bmpPixels = brBmp.ReadBytes(MipMap.width * MipMap.height / 2);
-                brBmp.Close();
-
-                // Overwrite mipmap pixels
-                BinaryWriter bw = new BinaryWriter(File.OpenWrite(filepath));
-                bw.BaseStream.Position = MipMap.pixelsOffset;
-                bw.Write(bmpPixels);
-                bw.Close();
             }
         }
         private void Remove()
         {
+            EnsureBackup();
             ReadTexture(filepath, selectedRowIndexGlobal);
 
             BinaryReader br = new BinaryReader(File.Open(filepath, FileMode.Open));
@@ -1544,6 +1425,7 @@ namespace RE4_PS2_TPL_Manager
         }
         private void RemoveMipmaps()
         {
+            EnsureBackup();
             ReadTexture(filepath, selectedRowIndexGlobal);
             int pixelsLengthAcumulator = 0;
 
@@ -1726,33 +1608,40 @@ namespace RE4_PS2_TPL_Manager
         private void btnOpenFile_Click(object sender, EventArgs e)
         {
             dialog.Filter = "RE4 PS2 TPL Files (*.tpl)|*.tpl";
-            dialog.ShowDialog();
+            if (dialog.ShowDialog() != DialogResult.OK) return;
             filepath = dialog.FileName;
+            AddRecentFile(filepath);
+            backupCreatedForCurrentFile = false;
             btnOpenFile.Dispose();
             btnCreateNewFile.Dispose();
             lblDropHere.Dispose();
             if (filepath != "")
             {
-                this.Text = "RE4 PS2 TPL Manager - " + Path.GetFileName(filepath);
+                this.Text = AppTitle + " - " + Path.GetFileName(filepath);
+                UpdateStatusText("Opening " + Path.GetFileName(filepath) + "...");
                 FillTable();
             }
         }
         private void openTPLFileToolStripMenuItem_Click(object sender, EventArgs e)
         {
             dialog.Filter = "RE4 PS2 TPL Files (*.tpl)|*.tpl";
-            dialog.ShowDialog();
+            if (dialog.ShowDialog() != DialogResult.OK) return;
             filepath = dialog.FileName;
+            AddRecentFile(filepath);
+            backupCreatedForCurrentFile = false;
             btnCreateNewFile.Dispose();
             btnOpenFile.Dispose();
             lblDropHere.Dispose();
             if (filepath != "")
             {
-                this.Text = "RE4 PS2 TPL Manager - " + Path.GetFileName(filepath);
+                this.Text = AppTitle + " - " + Path.GetFileName(filepath);
+                UpdateStatusText("Opening " + Path.GetFileName(filepath) + "...");
                 FillTable();
             }
         }
         private void refreshTableToolStripMenuItem_Click(object sender, EventArgs e)
         {
+            UpdateStatusText("Refreshing texture table...");
             RefreshTable();
         }
         private void saveFileToolStripMenuItem_Click(object sender, EventArgs e)
@@ -1836,10 +1725,12 @@ namespace RE4_PS2_TPL_Manager
         // Menu: Texture
         private void btnExtract_Click(object sender, EventArgs e)
         {
+            UpdateStatusText("Extracting textures...");
             ExtractTPL();
         }
         private void btnAdd_Click(object sender, EventArgs e)
         {
+            UpdateStatusText("Adding textures...");
             AddNewTextures();
         }
         private void showHiddenToolStripMenuItem_Click(object sender, EventArgs e)
@@ -1862,6 +1753,7 @@ namespace RE4_PS2_TPL_Manager
                     table.Columns[10].Visible = false;
                     table.Columns[11].Visible = false;
                 }
+                UpdateStatusText(showHiddenToolStripMenuItem.Checked ? "Advanced texture columns shown" : "Advanced texture columns hidden");
             }
         }
         private void extractSelectedToolStripMenuItem_Click(object sender, EventArgs e)
@@ -1890,62 +1782,60 @@ namespace RE4_PS2_TPL_Manager
         }
         private void convertAllToPNGToolStripMenuItem_Click(object sender, EventArgs e)
         {
+            if (String.IsNullOrWhiteSpace(filepath) || !File.Exists(filepath)) return;
+
             try
             {
                 ConverterBMP converterBMP = new ConverterBMP();
                 converterBMP.TPLtoBMP(filepath, "PNG");
+                UpdateStatusText("All textures exported to PNG successfully.");
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                // ConverterBMP continues past individual texture failures and reports them here,
+                // instead of silently stopping at the first problematic entry.
+                MessageBox.Show(ex.Message, "Export all to PNG", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                UpdateStatusText("PNG export completed with one or more errors.");
             }
         }
         private void increaseAllTo256ColorsToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            if (filepath != "")
+            EnsureBackup();
+            if (String.IsNullOrWhiteSpace(filepath)) return;
+            int count = table.Rows.Count;
+            for (int i = 0; i < count; i++)
             {
-                for (int i = 0; i < table.Rows.Count; i++)
-                {
-                    selectedRowIndexGlobal = i;
-                    if (table.Rows[i].Cells[4].Value.ToString() != "8-bit")
-                    {
-                        string folderName = Path.GetFileNameWithoutExtension(filepath);
-
-                        ConverterBMP converterBMP = new ConverterBMP();
-                        converterBMP.BMPtoTPL(new string[] { $".temp/{folderName}/{i}_256.bmp" }, true);
-                        Replace(filepath, $".temp/0_256.tpl", 0, true);
-                    }
-                    else
-                    {
-                        continue;
-                    }
-                }
+                if (table.Rows[i].Cells[4].Value.ToString() == "8-bit") continue;
+                Image image = table.Rows[i].Cells[0].Value as Image;
+                if (image == null) continue;
+                TPLDefinition.TPL destination = tplReader.ReadTexture(filepath, i);
+                TPLDefinition.TPL replacement = textureEncoder.EncodeImage(image, 256, destination.interlace);
+                tplWriter.ReplaceTexture(filepath, i, replacement);
             }
+            UpdateStatusText("All eligible textures converted to 256 colors");
+            RefreshTableAndKeepSelection(selectedRowIndexGlobal);
         }
         private void decreaseAllTo16ColorsToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            if (filepath != "")
+            EnsureBackup();
+            if (String.IsNullOrWhiteSpace(filepath)) return;
+            int count = table.Rows.Count;
+            for (int i = 0; i < count; i++)
             {
-                for (int i = 0; i < table.Rows.Count; i++)
-                {
-                    selectedRowIndexGlobal = i;
-                    if (table.Rows[i].Cells[4].Value.ToString() != "4-bit")
-                    {
-                        string folderName = Path.GetFileNameWithoutExtension(filepath);
-
-                        ConverterBMP converterBMP = new ConverterBMP();
-                        converterBMP.BMPtoTPL(new string[] { $".temp/{folderName}/{i}_16.bmp" }, true);
-                        Replace(filepath, $".temp/0_16.tpl", 0, true);
-                    }
-                    else
-                    {
-                        continue;
-                    }
-                }
+                if (table.Rows[i].Cells[4].Value.ToString() == "4-bit") continue;
+                Image image = table.Rows[i].Cells[0].Value as Image;
+                if (image == null) continue;
+                TPLDefinition.TPL destination = tplReader.ReadTexture(filepath, i);
+                TPLDefinition.TPL replacement = textureEncoder.EncodeImage(image, 16, destination.interlace);
+                tplWriter.ReplaceTexture(filepath, i, replacement);
             }
+            UpdateStatusText("All eligible textures converted to 16 colors");
+            RefreshTableAndKeepSelection(selectedRowIndexGlobal);
         }
         // Menu: Tools
         private void btnCompileFromFolder_Click(object sender, EventArgs e)
         {
+            UpdateStatusText("Compiling TPL from folder...");
             CompileFromFolder();
         }
         private void convertAndImportBMPToolStripMenuItem_Click(object sender, EventArgs e)
@@ -1953,7 +1843,7 @@ namespace RE4_PS2_TPL_Manager
             OpenFileDialog openFileDialog = new OpenFileDialog();
             openFileDialog.Filter = "BMP Files (*.bmp)|*.bmp";
             openFileDialog.Multiselect = true;
-            openFileDialog.ShowDialog();
+            if (openFileDialog.ShowDialog() != DialogResult.OK) return;
 
             ConverterBMP converterBMP = new ConverterBMP();
             converterBMP.BMPtoTPL(openFileDialog.FileNames);
@@ -1962,7 +1852,7 @@ namespace RE4_PS2_TPL_Manager
         {
             OpenFileDialog openFileDialog = new OpenFileDialog();
             openFileDialog.Filter = "TPL Files (*.tpl)|*.tpl";
-            openFileDialog.ShowDialog();
+            if (openFileDialog.ShowDialog() != DialogResult.OK) return;
             UpdateAllOffsets(openFileDialog.FileName);
             openFileDialog.Dispose();
         }
@@ -1972,18 +1862,26 @@ namespace RE4_PS2_TPL_Manager
             if (e.RowIndex >= 0)
             {
                 texturePreview.Image = (Bitmap)(table.Rows[e.RowIndex].Cells[0].Value);
+                texturePreview.Invalidate();
+                UpdateTextureSelectionStatus(e.RowIndex);
             }
         }
         private void table_CellMouseDown(object sender, DataGridViewCellMouseEventArgs e)
         {
+            if (e.RowIndex < 0) return;
+
+            selectedRowIndexGlobal = e.RowIndex;
+
             if (e.Button == MouseButtons.Right)
             {
+                // Right-click now behaves like a normal selection before opening the context menu.
+                table.ClearSelection();
+                table.Rows[e.RowIndex].Selected = true;
+                if (e.ColumnIndex >= 0) table.CurrentCell = table.Rows[e.RowIndex].Cells[e.ColumnIndex];
+                texturePreview.Image = table.Rows[e.RowIndex].Cells[0].Value as Bitmap;
+                texturePreview.Invalidate();
+                UpdateTextureSelectionStatus(e.RowIndex);
                 ctxMenuTable.Show(Cursor.Position);
-                texturePreview.Image = (Bitmap)(table.Rows[e.RowIndex].Cells[0].Value);
-            }
-            if (e.RowIndex >= 0)
-            {
-                selectedRowIndexGlobal = e.RowIndex;
             }
         }
         private void table_CellEnter(object sender, DataGridViewCellEventArgs e)
@@ -1992,6 +1890,8 @@ namespace RE4_PS2_TPL_Manager
             {
                 selectedRowIndexGlobal = e.RowIndex;
                 texturePreview.Image = (Bitmap)(table.Rows[e.RowIndex].Cells[0].Value);
+                texturePreview.Invalidate();
+                UpdateTextureSelectionStatus(e.RowIndex);
             }
         }
         // Table context menu
@@ -2114,35 +2014,19 @@ namespace RE4_PS2_TPL_Manager
         }
         private void increaseColorDepthToolStripMenuItem_Click(object sender, EventArgs e)
         {
+            if (table.Rows.Count == 0) return;
             if (table.Rows[selectedRowIndexGlobal].Cells[4].Value.ToString() != "8-bit")
-            {
-                string folderName = Path.GetFileNameWithoutExtension(filepath);
-
-                ConverterBMP converterBMP = new ConverterBMP();
-                converterBMP.BMPtoTPL(new string[] { $".temp/{folderName}/{selectedRowIndexGlobal}_256.bmp" }, true);
-                Replace(filepath, $".temp/0_256.tpl", 0, true);
-            }
+                ReplaceCurrentPreviewAtColorDepth(256);
             else
-            {
-                MessageBox.Show("Texture is already at maximum colors allowed (256).", "Cannot increase bit depth",
-                    MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
-            }
+                MessageBox.Show("Texture is already at maximum colors allowed (256).", "Cannot increase bit depth", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
         }
         private void decreaseColorDepthToolStripMenuItem_Click(object sender, EventArgs e)
         {
+            if (table.Rows.Count == 0) return;
             if (table.Rows[selectedRowIndexGlobal].Cells[4].Value.ToString() != "4-bit")
-            {
-                string folderName = Path.GetFileNameWithoutExtension(filepath);
-
-                ConverterBMP converterBMP = new ConverterBMP();
-                converterBMP.BMPtoTPL(new string[] { $".temp/{folderName}/{selectedRowIndexGlobal}_16.bmp" }, true);
-                Replace(filepath, $".temp/0_16.tpl", 0, true);
-            }
+                ReplaceCurrentPreviewAtColorDepth(16);
             else
-            {
-                MessageBox.Show("Texture is already at minimum colors allowed (16).", "Cannot decrease bit depth",
-                    MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
-            }
+                MessageBox.Show("Texture is already at minimum colors allowed (16).", "Cannot decrease bit depth", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
         }
         // Menu: Help
         private void usabilityToolStripMenuItem_Click(object sender, EventArgs e)
@@ -2175,7 +2059,7 @@ namespace RE4_PS2_TPL_Manager
         }
         private void FrmMain_FormClosing(object sender, FormClosingEventArgs e)
         {
-            Directory.Delete(".temp", true);
+            // v1.1.3: no fixed temporary application directory is created or cleaned up.
             Console.WriteLine();
         }
         // Editor 
@@ -2308,35 +2192,13 @@ texturePreview.Image.Height.ToString() != table.Rows[selectedRowIndexGlobal].Cel
                     table.Rows[selectedRowIndexGlobal].Cells[0].Value = texturePreview.Image;
                 }
 
-                // Creating image then converting it to .tpl and adding to the main file
-                string folderName = Path.GetFileNameWithoutExtension(filepath);
-                IColorQuantizer colorQuantizer = new OctreeQuantizer();
-                Image image = new Bitmap(texturePreview.Image);
-
-                if (table.Rows[selectedRowIndexGlobal].Cells[4].Value.ToString() == "8-bit")
-                {
-                    Image target256 = ImageBuffer.QuantizeImage(image, colorQuantizer, 256, 4);
-                    image.Dispose();
-                    target256.Save(".temp/" + folderName + "/" + selectedRowIndexGlobal + "_256.bmp", ImageFormat.Bmp);
-                    target256.Dispose();
-
-                    ConverterBMP converterBMP = new ConverterBMP();
-                    converterBMP.BMPtoTPL(new string[] { ".temp/" + folderName + "/" + selectedRowIndexGlobal + "_256.bmp" }, true);
-
-                    Replace(filepath, ".temp/0_256.tpl", 0, true);
-                }
-                else
-                {
-                    Image target16 = ImageBuffer.QuantizeImage(image, colorQuantizer, 16, 4);
-                    image.Dispose();
-                    target16.Save(".temp/" + folderName + "/" + selectedRowIndexGlobal + "_16.bmp", ImageFormat.Bmp);
-                    target16.Dispose();
-
-                    ConverterBMP converterBMP = new ConverterBMP();
-                    converterBMP.BMPtoTPL(new string[] { ".temp/" + folderName + "/" + selectedRowIndexGlobal + "_16.bmp" }, true);
-
-                    Replace(filepath, ".temp/0_16.tpl", 0, true);
-                }
+                // Encode the edited preview directly in memory and replace the selected texture.
+                int colorCount = table.Rows[selectedRowIndexGlobal].Cells[4].Value.ToString() == "8-bit" ? 256 : 16;
+                TPLDefinition.TPL destination = tplReader.ReadTexture(filepath, selectedRowIndexGlobal);
+                TPLDefinition.TPL replacement = textureEncoder.EncodeImage(texturePreview.Image, colorCount, destination.interlace);
+                tplWriter.ReplaceTexture(filepath, selectedRowIndexGlobal, replacement);
+                UpdateStatusText("Texture changes applied successfully");
+                RefreshTableAndKeepSelection(selectedRowIndexGlobal);
             }
         }
 
@@ -2352,16 +2214,15 @@ texturePreview.Image.Height.ToString() != table.Rows[selectedRowIndexGlobal].Cel
         {
             OpenFileDialog openFileDialog = new OpenFileDialog();
             openFileDialog.Filter = "Image Files (*.png;*.bmp;*.tga)|*.png;*.bmp;*.tga";
-            openFileDialog.ShowDialog();
+            if (openFileDialog.ShowDialog() != DialogResult.OK) return;
 
             if (openFileDialog.FileName != "")
             {
                 // If it's TGA, then convert to bitmap
                 if (Path.GetExtension(openFileDialog.FileName).ToLower() == ".tga")
                 {
-                    TGASharpLib.TGA tga = new TGASharpLib.TGA(new Bitmap(openFileDialog.FileName));
+                    TGASharpLib.TGA tga = new TGASharpLib.TGA(openFileDialog.FileName);
                     texturePreview.Image = new Bitmap(tga.ToBitmap());
-                    texturePreview.Dispose();
                     return;
                 }
 
@@ -2449,36 +2310,16 @@ texturePreview.Image.Height.ToString() != table.Rows[selectedRowIndexGlobal].Cel
 
         private void convertAllToBMPToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            if (filepath != "")
+            if (String.IsNullOrWhiteSpace(filepath)) return;
+            try
             {
-                try
-                {
-                    string sourcePath = ".temp/" + Path.GetFileNameWithoutExtension(filepath);
-                    string targetPath = "Converted/" + Path.GetFileNameWithoutExtension(filepath);
-                    string fileName = string.Empty;
-                    string destFile = string.Empty;
-
-                    if (Directory.Exists(sourcePath))
-                    {
-                        string[] files = Directory.GetFiles(sourcePath);
-
-                        // Copy the files and overwrite destination files if they already exist. 
-                        foreach (string s in files)
-                        {
-                            // Use static Path methods to extract only the file name from the path.
-                            fileName = Path.GetFileName(s);
-                            destFile = Path.Combine(targetPath, fileName);
-                            File.Copy(s, destFile, true);
-                        }
-                    }
-                    else
-                    {
-                        Console.WriteLine("Source path does not exist.");
-                    }
-                }
-                catch (Exception)
-                {
-                }
+                ConverterBMP converterBMP = new ConverterBMP();
+                converterBMP.TPLtoBMP(filepath, "BMP");
+                UpdateStatusText($"Textures converted at folder 'Converted/{Path.GetFileNameWithoutExtension(filepath)}'");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Convert to BMP", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -2487,12 +2328,13 @@ texturePreview.Image.Height.ToString() != table.Rows[selectedRowIndexGlobal].Cel
             if (filepath != "")
             {
                 string folderName = Path.GetFileNameWithoutExtension(filepath);
+                UpdateStatusText("Exporting all textures to TGA...");
                 foreach (DataGridViewRow row in table.Rows)
                 {
                     var tga = TGASharpLib.TGA.FromBitmap((Bitmap)table.Rows[row.Index].Cells[0].Value);
                     tga.Save($"Converted/{folderName}/{table.Rows[row.Index].Cells[1].Value}.tga");
-                    UpdateStatusText($"Texture converted at folder 'Converted/{folderName}'");
                 }
+                UpdateStatusText($"All textures exported to TGA at 'Converted/{folderName}'");
             }
         }
 
@@ -2546,7 +2388,7 @@ texturePreview.Image.Height.ToString() != table.Rows[selectedRowIndexGlobal].Cel
             {
                 OpenFileDialog dialog = new OpenFileDialog();
                 dialog.Filter = "Image Files (*.png;*.bmp;*.tga)|*.png;*.bmp;*.tga";
-                dialog.ShowDialog();
+                if (dialog.ShowDialog() != DialogResult.OK) return;
 
                 if (dialog.FileName != "")
                 {
@@ -2582,7 +2424,7 @@ texturePreview.Image.Height.ToString() != table.Rows[selectedRowIndexGlobal].Cel
             {
                 OpenFileDialog dialog = new OpenFileDialog();
                 dialog.Filter = "Image Files (*.png;*.bmp;*.tga)|*.png;*.bmp;*.tga";
-                dialog.ShowDialog();
+                if (dialog.ShowDialog() != DialogResult.OK) return;
 
                 if (dialog.FileName != "")
                 {
@@ -2628,7 +2470,7 @@ texturePreview.Image.Height.ToString() != table.Rows[selectedRowIndexGlobal].Cel
                 btnOpenFile.Dispose();
                 btnCreateNewFile.Dispose();
                 lblDropHere.Dispose();
-                this.Text = "RE4 PS2 TPL Manager - " + Path.GetFileName(filepath);
+                this.Text = AppTitle + " - " + Path.GetFileName(filepath);
                 RefreshTable();
             }
             else
@@ -2643,10 +2485,11 @@ texturePreview.Image.Height.ToString() != table.Rows[selectedRowIndexGlobal].Cel
             OpenFileDialog openFileDialog = new OpenFileDialog();
             openFileDialog.Filter = "RE4 PS2 SMD Files (*.SMD)|*.SMD";
             openFileDialog.Multiselect = true;
-            openFileDialog.ShowDialog();
+            if (openFileDialog.ShowDialog() != DialogResult.OK) return;
 
-            if (openFileDialog.FileNames[0] != "")
+            if (openFileDialog.FileNames.Length > 0 && openFileDialog.FileNames[0] != "")
             {
+                string filename = "";
                 try
                 {
                     for (int i = 0; i < openFileDialog.FileNames.Length; i++)
@@ -2663,12 +2506,23 @@ texturePreview.Image.Height.ToString() != table.Rows[selectedRowIndexGlobal].Cel
                         {
                             Directory.CreateDirectory("SMD Textures");
                         }
-                        string filename = Path.GetFileNameWithoutExtension(openFileDialog.FileNames[i]);
+                        filename = Path.GetFileNameWithoutExtension(openFileDialog.FileNames[i]);
 
                         BinaryWriter bw = new BinaryWriter(File.Create("SMD Textures/" + filename + ".tpl"));
                         bw.Write(tpl);
                         bw.Close();
                         UpdateStatusText($"TPL extracted from SMD at directory 'SMD Textures/{filename}.tpl'");
+                    }
+                    DialogResult result = MessageBox.Show("Do you want to open the extracted TPL?", "Question", MessageBoxButtons.YesNo,
+                        MessageBoxIcon.Question);
+                    if (result == DialogResult.Yes)
+                    {
+                        filepath = "SMD Textures/" + filename + ".tpl";
+                        btnOpenFile.Dispose();
+                        btnCreateNewFile.Dispose();
+                        lblDropHere.Dispose();
+                        this.Text = AppTitle + " - " + Path.GetFileName(filepath);
+                        FillTable();
                     }
                 }
                 catch (Exception ex)
@@ -2682,7 +2536,7 @@ texturePreview.Image.Height.ToString() != table.Rows[selectedRowIndexGlobal].Cel
         {
             OpenFileDialog openFileDialog = new OpenFileDialog();
             openFileDialog.Filter = "RE4 PS2 SMD Files (*.SMD)|*.SMD";
-            openFileDialog.ShowDialog();
+            if (openFileDialog.ShowDialog() != DialogResult.OK) return;
 
             if (openFileDialog.FileName != "")
             {
@@ -2726,55 +2580,282 @@ texturePreview.Image.Height.ToString() != table.Rows[selectedRowIndexGlobal].Cel
         {
             OpenFileDialog openFileDialog = new OpenFileDialog();
             openFileDialog.Filter = "RE4 PS2 EFF Files (*.EFF)|*.EFF";
-            openFileDialog.ShowDialog();
+            if (openFileDialog.ShowDialog() != DialogResult.OK) return;
 
-            BinaryReader br = new BinaryReader(File.OpenRead(openFileDialog.FileName));
-            br.BaseStream.Position = 0x18;
-            uint effTexturesStartOffset = br.ReadUInt32();
-            uint effTexturesEndOffset = br.ReadUInt32();
-
-            // Get textures chunk (contains header with count and offsets)
-            br.BaseStream.Position = effTexturesStartOffset;
-            byte[] textures = br.ReadBytes((int)(effTexturesEndOffset - br.BaseStream.Position));
-            br.Close();
-
-            // Create folder
-            if (!Directory.Exists("EFF Textures"))
+            byte[] textures;
+            using (BinaryReader br = new BinaryReader(File.OpenRead(openFileDialog.FileName)))
             {
-                Directory.CreateDirectory("EFF Textures");
+                br.BaseStream.Position = 0x18;
+                uint effTexturesStartOffset = br.ReadUInt32();
+                uint effTexturesEndOffset = br.ReadUInt32();
+                if (effTexturesEndOffset < effTexturesStartOffset || effTexturesEndOffset > br.BaseStream.Length)
+                    throw new InvalidDataException("Invalid EFF texture chunk offsets.");
+
+                br.BaseStream.Position = effTexturesStartOffset;
+                textures = br.ReadBytes((int)(effTexturesEndOffset - effTexturesStartOffset));
             }
+
+            Directory.CreateDirectory("EFF Textures");
             string filename = Path.GetFileNameWithoutExtension(openFileDialog.FileName);
 
-            // Heff stands for Header Effects (contains header info with index and offsets)
-            BinaryWriter bw = new BinaryWriter(File.Create(".temp/0.heff"));
-            bw.Write(textures);
-            bw.Close();
-
-            // Reads the .heff and extracts every texture from it
-            BinaryReader br2 = new BinaryReader(File.OpenRead(".temp/0.heff"));
-            uint fileCount = br2.ReadUInt32();
-
-            for (int i = 0; i < fileCount; i++)
+            // HEFF is an embedded header/index. Read it directly from memory instead of creating an intermediate HEFF file.
+            using (MemoryStream memory = new MemoryStream(textures, false))
+            using (BinaryReader br2 = new BinaryReader(memory))
             {
-                BinaryWriter bw2 = new BinaryWriter(File.Create("EFF Textures/" + filename + "_" + i + ".tpl"));
-                br2.BaseStream.Position = 0x04 * i;
-                uint startOffset = br2.ReadUInt32();
-                uint endOffset = br2.ReadUInt32();
+                if (memory.Length < 4) throw new InvalidDataException("EFF texture header is truncated.");
+                uint fileCount = br2.ReadUInt32();
 
-                br2.BaseStream.Position = startOffset;
-                if (i != fileCount - 1)
+                long offsetTableEnd = 4L + (4L * fileCount);
+                if (offsetTableEnd > memory.Length)
+                    throw new InvalidDataException("EFF texture offset table is truncated.");
+
+                for (int i = 0; i < fileCount; i++)
                 {
-                    byte[] tpl = br2.ReadBytes((int)(endOffset - startOffset));
-                    bw2.Write(tpl);
+                    long offsetEntry = 4L + (4L * i);
+                    memory.Position = offsetEntry;
+                    uint startOffset = br2.ReadUInt32();
+
+                    uint actualEnd;
+                    if (i < fileCount - 1)
+                    {
+                        actualEnd = br2.ReadUInt32();
+                    }
+                    else
+                    {
+                        actualEnd = (uint)memory.Length;
+                    }
+
+                    if (startOffset < offsetTableEnd || startOffset > actualEnd || actualEnd > memory.Length)
+                        throw new InvalidDataException("Invalid embedded TPL range in EFF file.");
+
+                    memory.Position = startOffset;
+                    byte[] tpl = br2.ReadBytes((int)(actualEnd - startOffset));
+                    File.WriteAllBytes(Path.Combine("EFF Textures", filename + "_" + i + ".tpl"), tpl);
                 }
-                else
-                {
-                    byte[] tpl = br2.ReadBytes((int)(br2.BaseStream.Length - startOffset));
-                    bw2.Write(tpl);
-                }
-                bw2.Close();
             }
-            br2.Close();
+
+            UpdateStatusText("EFF textures extracted successfully");
+        }
+
+        private void pNGToTPLToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            using (OpenFileDialog openFileDialog = new OpenFileDialog())
+            {
+                openFileDialog.Filter = "PNG Files (*.png)|*.png";
+                if (openFileDialog.ShowDialog() != DialogResult.OK) return;
+
+                using (Bitmap image = new Bitmap(openFileDialog.FileName))
+                {
+                    int colorCount = GetImportColorCount(image);
+                    TPLDefinition.TPL texture = textureEncoder.EncodeImage(image, colorCount);
+                    Directory.CreateDirectory("Converted");
+                    string output = Path.Combine("Converted", Path.GetFileNameWithoutExtension(openFileDialog.FileName) + ".tpl");
+                    tplWriter.WriteSingleTexture(output, texture);
+                    UpdateStatusText("PNG converted to TPL: " + output);
+                }
+            }
+        }
+
+        private void fixTransparencyToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                // Fix transparency issue from 0xFF to 0x80
+                for (int i = 0; i < TPL.tplCount; i++)
+                {
+                    ReadTexture(filepath, i);
+
+                    BinaryWriter bw = new BinaryWriter(File.Open(filepath, FileMode.Open));
+                    bw.BaseStream.Position = TPL.paletteOffset + 0x03; // moves to first alpha byte
+
+                    if (TPL.bitDepth == 8)
+                    {
+                        for (int c = 3; c < 0x80; c += 4)
+                        {
+                            if (TPL.palette[c] == 255)
+                            {
+                                bw.Write((byte)0x80);
+                                bw.BaseStream.Position += 3;
+                            }
+                            else
+                            {
+                                bw.BaseStream.Position += 4;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        for (int c = 3; c < 0x400; c += 4)
+                        {
+                            if (TPL.palette[c] == 255)
+                            {
+                                bw.Write((byte)0x80);
+                                bw.BaseStream.Position += 3;
+                            }
+                            else
+                            {
+                                bw.BaseStream.Position += 4;
+                            }
+                        }
+                    }
+                    bw.Close();
+                    UpdateStatusText("All transparencies fixed (0xFF to 0x80)");
+                }
+                RefreshTableAndKeepSelection(selectedRowIndexGlobal);
+            }
+            catch (Exception exc)
+            {
+                MessageBox.Show(exc.Message);
+            }
+        }
+
+        private void batchReplaceToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (String.IsNullOrWhiteSpace(filepath)) return;
+
+            BatchColorDepthMode batchMode;
+            using (DialogBatchReplaceMode modeDialog = new DialogBatchReplaceMode())
+            {
+                if (modeDialog.ShowDialog(this) != DialogResult.OK)
+                {
+                    UpdateStatusText("Batch replace cancelled");
+                    return;
+                }
+                batchMode = modeDialog.SelectedMode;
+            }
+
+            using (CommonOpenFileDialog folderDialog = new CommonOpenFileDialog())
+            {
+                folderDialog.IsFolderPicker = true;
+                if (folderDialog.ShowDialog() != CommonFileDialogResult.Ok)
+                {
+                    UpdateStatusText("Batch replace cancelled");
+                    return;
+                }
+
+                var files = Directory.GetFiles(folderDialog.FileName, "*.png")
+                    .Where(f =>
+                    {
+                        int parsedIndex;
+                        return Int32.TryParse(Path.GetFileNameWithoutExtension(f), out parsedIndex) && parsedIndex >= 0;
+                    })
+                    .ToArray();
+                int replaced = 0;
+                int replaced4Bit = 0;
+                int replaced8Bit = 0;
+                var failures = new List<string>();
+                EnsureBackup();
+
+                string modeLabel = GetBatchModeLabel(batchMode);
+                UpdateStatusText($"Batch replace in progress • PNG indexed filenames • Mode: {modeLabel}...");
+
+                for (int i = 0; i < table.Rows.Count; i++)
+                {
+                    string candidate = files.FirstOrDefault(f =>
+                        String.Equals(Path.GetFileNameWithoutExtension(f), i.ToString(), StringComparison.OrdinalIgnoreCase));
+                    if (candidate == null) continue;
+
+                    try
+                    {
+                        selectedRowIndexGlobal = i;
+                        Replace(filepath, candidate, 0, false, true, batchMode);
+                        replaced++;
+
+                        string extension = Path.GetExtension(candidate).ToLowerInvariant();
+                        if (extension != ".tpl")
+                        {
+                            int resultingColorCount;
+                            if (batchMode == BatchColorDepthMode.Force4Bit) resultingColorCount = 16;
+                            else if (batchMode == BatchColorDepthMode.Force8Bit) resultingColorCount = 256;
+                            else
+                            {
+                                string targetDepth = Convert.ToString(table.Rows[i].Cells[4].Value) ?? "";
+                                resultingColorCount = targetDepth == "4-bit" ? 16 : 256;
+                            }
+
+                            if (resultingColorCount == 16) replaced4Bit++;
+                            else replaced8Bit++;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        failures.Add(i + ": " + ex.Message);
+                    }
+                }
+
+                RefreshTableAndKeepSelection(selectedRowIndexGlobal);
+                UpdateStatusText($"Batch replace completed • {replaced} replaced • Mode: {modeLabel}" +
+                    (replaced4Bit + replaced8Bit > 0 ? $" • {replaced4Bit} 4-bit / {replaced8Bit} 8-bit" : "") +
+                    (failures.Count > 0 ? $" • {failures.Count} failed" : ""));
+
+                if (failures.Count > 0)
+                {
+                    MessageBox.Show("Some textures could not be replaced:\n\n" + String.Join("\n", failures.Take(12)),
+                        "Batch Replace", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
+            }
+        }
+
+        private static string GetBatchModeLabel(BatchColorDepthMode mode)
+        {
+            switch (mode)
+            {
+                case BatchColorDepthMode.Force4Bit:
+                    return "Force 4-bit";
+                case BatchColorDepthMode.Force8Bit:
+                    return "Force 8-bit";
+                default:
+                    return "Preserve TPL color depth";
+            }
+        }
+
+        private string RecentFilesPath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "RE4_PS2_TPL_Manager", "recent.txt");
+        private void InitializeRecentFilesMenu()
+        {
+            recentFilesMenu = new ToolStripMenuItem("Recent files");
+            fileToolStripMenuItem.DropDownItems.Insert(Math.Min(3, fileToolStripMenuItem.DropDownItems.Count), recentFilesMenu);
+            LoadRecentFiles(); RefreshRecentFilesMenu();
+        }
+        private void LoadRecentFiles()
+        {
+            try { if (File.Exists(RecentFilesPath)) recentFiles.AddRange(File.ReadAllLines(RecentFilesPath).Where(x => !String.IsNullOrWhiteSpace(x)).Distinct(StringComparer.OrdinalIgnoreCase).Take(10)); } catch { }
+        }
+        private void SaveRecentFiles()
+        {
+            try { Directory.CreateDirectory(Path.GetDirectoryName(RecentFilesPath)); File.WriteAllLines(RecentFilesPath, recentFiles.Take(10)); } catch { }
+        }
+        private void AddRecentFile(string path)
+        {
+            if (String.IsNullOrWhiteSpace(path)) return;
+            recentFiles.RemoveAll(x => String.Equals(x, path, StringComparison.OrdinalIgnoreCase)); recentFiles.Insert(0, path);
+            if (recentFiles.Count > 10) recentFiles.RemoveRange(10, recentFiles.Count - 10); SaveRecentFiles(); RefreshRecentFilesMenu();
+        }
+        private void RefreshRecentFilesMenu()
+        {
+            if (recentFilesMenu == null) return; recentFilesMenu.DropDownItems.Clear();
+            foreach (string path in recentFiles.ToArray())
+            {
+                var item = new ToolStripMenuItem(Path.GetFileName(path)) { ToolTipText = path, Tag = path };
+                item.Click += (o, a) => OpenRecentFile(Convert.ToString(((ToolStripMenuItem)o).Tag)); recentFilesMenu.DropDownItems.Add(item);
+            }
+            if (recentFilesMenu.DropDownItems.Count == 0) recentFilesMenu.DropDownItems.Add(new ToolStripMenuItem("(empty)") { Enabled = false });
+        }
+        private void OpenRecentFile(string path)
+        {
+            if (!File.Exists(path)) { recentFiles.RemoveAll(x => String.Equals(x,path,StringComparison.OrdinalIgnoreCase)); SaveRecentFiles(); RefreshRecentFilesMenu(); MessageBox.Show("This recent file no longer exists.", "Recent files", MessageBoxButtons.OK, MessageBoxIcon.Information); return; }
+            filepath=path; backupCreatedForCurrentFile=false; AddRecentFile(path); this.Text=AppTitle+" - "+Path.GetFileName(filepath);
+            btnOpenFile.Dispose(); btnCreateNewFile.Dispose(); lblDropHere.Dispose(); UpdateStatusText("Opening "+Path.GetFileName(filepath)+"..."); FillTable();
+        }
+        private void EnsureBackup()
+        {
+            if (backupCreatedForCurrentFile || String.IsNullOrWhiteSpace(filepath) || !File.Exists(filepath)) return;
+            try
+            {
+                string backup = filepath + ".bak";
+                File.Copy(filepath, backup, true); backupCreatedForCurrentFile = true;
+                UpdateStatusText("Backup created: " + Path.GetFileName(backup));
+            }
+            catch (Exception ex) { throw new IOException("Could not create the automatic backup before modifying the TPL. " + ex.Message, ex); }
         }
     }
 }

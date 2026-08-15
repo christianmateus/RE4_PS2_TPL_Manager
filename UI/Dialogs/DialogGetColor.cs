@@ -1,4 +1,5 @@
 ﻿using System.Windows.Forms;
+using RE4_PS2_TPL_Manager.UI.Theming;
 
 namespace RE4_PS2_TPL_Manager.Dialog
 {
@@ -8,6 +9,7 @@ namespace RE4_PS2_TPL_Manager.Dialog
         public DialogGetColor()
         {
             InitializeComponent();
+            DarkTheme.ApplyDialog(this);
         }
 
         private void btn16_Click(object sender, System.EventArgs e)

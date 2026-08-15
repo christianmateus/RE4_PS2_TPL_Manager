@@ -1,0 +1,32 @@
+RE4 PS2 TPL Manager - Etapa 1: carregamento/preview
+Data: 2026-08-15
+
+Alteracoes principais
+--------------------
+1. Helpers/TplHelper.cs
+   - Decoder do preview refeito para montar os pixels em arrays de memoria.
+   - Bitmap final escrito via LockBits/Marshal.Copy.
+   - Removidas chamadas Bitmap.SetPixel/GetPixel do caminho principal de preview.
+   - Mantido o nibble order original do formato 4-bit.
+   - Rearranjo da CLUT PS2 de 256 cores centralizado em UnswizzleClut8Index().
+   - Deinterlace 4-bit e 8-bit executado diretamente em buffers de memoria.
+   - Reordenacao de paginas 128x128 do 4-bit feita com Array.Copy.
+   - Validacao de offsets/tamanho dos blocos antes da leitura.
+
+2. FrmMain.cs
+   - Corrigida leitura dos dados brutos de texturas 32-bit (0x06): 4 bytes por pixel.
+   - Corrigida a mesma contagem para mipmaps 32-bit nos dois caminhos ReadTexture().
+
+Escopo deliberadamente nao alterado nesta etapa
+-----------------------------------------------
+- Importacao/replacement e escrita/rebuild de TPL.
+- ConverterBMP/ConverterTGA antigos.
+- Estrutura geral da UI.
+- Logica de mipmaps alem da correcao de tamanho para 32-bit.
+
+Observacao
+----------
+Este pacote foi revisado estaticamente no ambiente de trabalho, mas o ambiente usado
+para preparar o ZIP nao possui MSBuild/Visual Studio/Mono instalado. Compile no mesmo
+Visual Studio usado no projeto original e reporte qualquer erro de compilacao com a
+mensagem completa.

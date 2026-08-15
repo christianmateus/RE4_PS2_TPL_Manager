@@ -5,7 +5,7 @@
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{01519EE9-1D3A-421E-8A6F-DC6B4FCC9013}</ProjectGuid>
-    <OutputType>Exe</OutputType>
+    <OutputType>WinExe</OutputType>
     <RootNamespace>RE4_PS2_TPL_Manager</RootNamespace>
     <AssemblyName>RE4_PS2_TPL_Manager</AssemblyName>
     <TargetFrameworkVersion>v4.7</TargetFrameworkVersion>
@@ -23,8 +23,8 @@
     <UpdatePeriodically>false</UpdatePeriodically>
     <UpdateRequired>false</UpdateRequired>
     <MapFileExtensions>true</MapFileExtensions>
-    <ApplicationRevision>7</ApplicationRevision>
-    <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
+    <ApplicationRevision>8</ApplicationRevision>
+    <ApplicationVersion>1.1.0.%2a</ApplicationVersion>
     <UseApplicationTrust>false</UseApplicationTrust>
     <PublishWizardCompleted>true</PublishWizardCompleted>
     <BootstrapperEnabled>true</BootstrapperEnabled>
@@ -61,7 +61,7 @@
     <GenerateManifests>true</GenerateManifests>
   </PropertyGroup>
   <PropertyGroup>
-    <SignManifests>true</SignManifests>
+    <SignManifests>false</SignManifests>
   </PropertyGroup>
   <PropertyGroup>
     <NoWin32Manifest>true</NoWin32Manifest>
@@ -70,10 +70,6 @@
     <ApplicationIcon>favicon.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="ColorSlider, Version=1.0.0.4, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>bin\Debug\ColorSlider.dll</HintPath>
-    </Reference>
     <Reference Include="ImageProcessor, Version=2.9.1.225, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\ImageProcessor.2.9.1\lib\net452\ImageProcessor.dll</HintPath>
     </Reference>
@@ -99,118 +95,138 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AdditionalLibraries\TGASharpLib.cs" />
-    <Compile Include="ColorCaches\BaseColorCache.cs" />
-    <Compile Include="ColorCaches\Common\ColorModel.cs" />
-    <Compile Include="ColorCaches\EuclideanDistance\EuclideanDistanceColorCache.cs" />
-    <Compile Include="ColorCaches\IColorCache.cs" />
-    <Compile Include="ColorCaches\LocalitySensitiveHash\LshBucketInfo.cs" />
-    <Compile Include="ColorCaches\LocalitySensitiveHash\LshColorCache.cs" />
-    <Compile Include="ColorCaches\Octree\OctreeCacheNode.cs" />
-    <Compile Include="ColorCaches\Octree\OctreeColorCache.cs" />
-    <Compile Include="ConverterBMP.cs" />
-    <Compile Include="ConverterTGA.cs" />
-    <Compile Include="Credits.cs">
+    <Compile Include="ThirdParty\TGASharpLib.cs" />
+    <Compile Include="Imaging\ColorCaches\BaseColorCache.cs" />
+    <Compile Include="Imaging\ColorCaches\Common\ColorModel.cs" />
+    <Compile Include="Imaging\ColorCaches\EuclideanDistance\EuclideanDistanceColorCache.cs" />
+    <Compile Include="Imaging\ColorCaches\IColorCache.cs" />
+    <Compile Include="Imaging\ColorCaches\LocalitySensitiveHash\LshBucketInfo.cs" />
+    <Compile Include="Imaging\ColorCaches\LocalitySensitiveHash\LshColorCache.cs" />
+    <Compile Include="Imaging\ColorCaches\Octree\OctreeCacheNode.cs" />
+    <Compile Include="Imaging\ColorCaches\Octree\OctreeColorCache.cs" />
+    <Compile Include="Core\Services\InterlaceConverter.cs" />
+    <Compile Include="Core\Services\TextureDecoder.cs" />
+    <Compile Include="Core\Services\TextureEncoder.cs" />
+    <Compile Include="Core\Services\TplReader.cs" />
+    <Compile Include="Core\Services\TplWriter.cs" />
+    <Compile Include="Core\Conversion\ConverterBMP.cs" />
+    <Compile Include="Core\Conversion\ConverterTGA.cs" />
+    <Compile Include="Core\Conversion\Convertor1.cs" />
+    <Compile Include="Core\Conversion\Convertor2.cs" />
+    <Compile Include="UI\Forms\Credits.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Credits.designer.cs">
+    <Compile Include="UI\Forms\Credits.designer.cs">
       <DependentUpon>Credits.cs</DependentUpon>
     </Compile>
-    <Compile Include="Dialog\DialogGetIndex.cs">
+    <Compile Include="UI\Dialogs\DialogGetIndex.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Dialog\DialogGetIndex.Designer.cs">
+    <Compile Include="UI\Dialogs\DialogGetIndex.Designer.cs">
       <DependentUpon>DialogGetIndex.cs</DependentUpon>
     </Compile>
-    <Compile Include="Dialog\DialogGetColor.cs">
+    <Compile Include="UI\Dialogs\DialogGetColor.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Dialog\DialogGetColor.Designer.cs">
+    <Compile Include="UI\Dialogs\DialogInterlaceConversion.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="UI\Dialogs\DialogBatchReplaceMode.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="UI\Dialogs\DialogGetColor.Designer.cs">
       <DependentUpon>DialogGetColor.cs</DependentUpon>
     </Compile>
-    <Compile Include="Ditherers\BaseColorDitherer.cs" />
-    <Compile Include="Ditherers\ErrorDiffusion\AtkinsonDithering.cs" />
-    <Compile Include="Ditherers\ErrorDiffusion\BaseErrorDiffusionDitherer.cs" />
-    <Compile Include="Ditherers\ErrorDiffusion\BurkesDitherer.cs" />
-    <Compile Include="Ditherers\ErrorDiffusion\FanDitherer.cs" />
-    <Compile Include="Ditherers\ErrorDiffusion\FilterLiteSierra.cs" />
-    <Compile Include="Ditherers\ErrorDiffusion\FloydSteinbergDitherer.cs" />
-    <Compile Include="Ditherers\ErrorDiffusion\JarvisJudiceNinkeDitherer.cs" />
-    <Compile Include="Ditherers\ErrorDiffusion\ShiauDitherer.cs" />
-    <Compile Include="Ditherers\ErrorDiffusion\SierraDitherer.cs" />
-    <Compile Include="Ditherers\ErrorDiffusion\StuckiDitherer.cs" />
-    <Compile Include="Ditherers\ErrorDiffusion\TwoRowSierraDitherer.cs" />
-    <Compile Include="Ditherers\IColorDitherer.cs" />
-    <Compile Include="Ditherers\Ordered\BaseOrderedDitherer.cs" />
-    <Compile Include="Ditherers\Ordered\BayerDitherer4.cs" />
-    <Compile Include="Ditherers\Ordered\BayerDitherer8.cs" />
-    <Compile Include="Ditherers\Ordered\ClusteredDotDitherer.cs" />
-    <Compile Include="Ditherers\Ordered\DotHalfToneDitherer.cs" />
-    <Compile Include="Extensions\Extend.IEnumerable.cs" />
-    <Compile Include="Extensions\Extend.Image.cs" />
-    <Compile Include="Extensions\Extend.PixelFormat.cs" />
-    <Compile Include="FrmMain.cs">
+    <Compile Include="Imaging\Ditherers\BaseColorDitherer.cs" />
+    <Compile Include="Imaging\Ditherers\ErrorDiffusion\AtkinsonDithering.cs" />
+    <Compile Include="Imaging\Ditherers\ErrorDiffusion\BaseErrorDiffusionDitherer.cs" />
+    <Compile Include="Imaging\Ditherers\ErrorDiffusion\BurkesDitherer.cs" />
+    <Compile Include="Imaging\Ditherers\ErrorDiffusion\FanDitherer.cs" />
+    <Compile Include="Imaging\Ditherers\ErrorDiffusion\FilterLiteSierra.cs" />
+    <Compile Include="Imaging\Ditherers\ErrorDiffusion\FloydSteinbergDitherer.cs" />
+    <Compile Include="Imaging\Ditherers\ErrorDiffusion\JarvisJudiceNinkeDitherer.cs" />
+    <Compile Include="Imaging\Ditherers\ErrorDiffusion\ShiauDitherer.cs" />
+    <Compile Include="Imaging\Ditherers\ErrorDiffusion\SierraDitherer.cs" />
+    <Compile Include="Imaging\Ditherers\ErrorDiffusion\StuckiDitherer.cs" />
+    <Compile Include="Imaging\Ditherers\ErrorDiffusion\TwoRowSierraDitherer.cs" />
+    <Compile Include="Imaging\Ditherers\IColorDitherer.cs" />
+    <Compile Include="Imaging\Ditherers\Ordered\BaseOrderedDitherer.cs" />
+    <Compile Include="Imaging\Ditherers\Ordered\BayerDitherer4.cs" />
+    <Compile Include="Imaging\Ditherers\Ordered\BayerDitherer8.cs" />
+    <Compile Include="Imaging\Ditherers\Ordered\ClusteredDotDitherer.cs" />
+    <Compile Include="Imaging\Ditherers\Ordered\DotHalfToneDitherer.cs" />
+    <Compile Include="Imaging\Extensions\Extend.IEnumerable.cs" />
+    <Compile Include="Imaging\Extensions\Extend.Image.cs" />
+    <Compile Include="Imaging\Extensions\Extend.PixelFormat.cs" />
+    <Compile Include="UI\Theming\DarkTheme.cs" />
+    <Compile Include="UI\Controls\TexturePreviewBox.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="UI\Forms\FrmMain.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="FrmMain.Designer.cs">
+    <Compile Include="UI\Forms\FrmMain.Designer.cs">
       <DependentUpon>FrmMain.cs</DependentUpon>
     </Compile>
-    <Compile Include="Helpers\ColorModelHelper.cs" />
-    <Compile Include="Helpers\FastRandom.cs" />
-    <Compile Include="Helpers\Guard.cs" />
-    <Compile Include="Helpers\ImageBuffer.cs" />
-    <Compile Include="Helpers\Pixel.cs" />
-    <Compile Include="Helpers\Pixels\IIndexedPixel.cs" />
-    <Compile Include="Helpers\Pixels\Indexed\PixelData1Indexed.cs" />
-    <Compile Include="Helpers\Pixels\Indexed\PixelData4Indexed.cs" />
-    <Compile Include="Helpers\Pixels\Indexed\PixelData8Indexed.cs" />
-    <Compile Include="Helpers\Pixels\INonIndexedPixel.cs" />
-    <Compile Include="Helpers\Pixels\NonIndexed\PixelDataArgb1555.cs" />
-    <Compile Include="Helpers\Pixels\NonIndexed\PixelDataArgb64.cs" />
-    <Compile Include="Helpers\Pixels\NonIndexed\PixelDataArgb8888.cs" />
-    <Compile Include="Helpers\Pixels\NonIndexed\PixelDataGray16.cs" />
-    <Compile Include="Helpers\Pixels\NonIndexed\PixelDataRgb48.cs" />
-    <Compile Include="Helpers\Pixels\NonIndexed\PixelDataRgb555.cs" />
-    <Compile Include="Helpers\Pixels\NonIndexed\PixelDataRgb565.cs" />
-    <Compile Include="Helpers\Pixels\NonIndexed\PixelDataRgb888.cs" />
-    <Compile Include="Helpers\Pixels\NonIndexed\PixelDataRgb8888.cs" />
-    <Compile Include="Helpers\PixelTransform.cs" />
-    <Compile Include="Helpers\QuantizationHelper.cs" />
-    <Compile Include="PathProviders\IPathProvider.cs" />
-    <Compile Include="PathProviders\ReversedPathProvider.cs" />
-    <Compile Include="PathProviders\SerpentinePathProvider.cs" />
-    <Compile Include="PathProviders\StandardPathProvider.cs" />
-    <Compile Include="Program.cs" />
+    <Compile Include="Imaging\Helpers\ColorModelHelper.cs" />
+    <Compile Include="Imaging\Helpers\DeinterlaceHelper.cs" />
+    <Compile Include="Imaging\Helpers\FastRandom.cs" />
+    <Compile Include="Imaging\Helpers\Guard.cs" />
+    <Compile Include="Imaging\Helpers\ImageBuffer.cs" />
+    <Compile Include="Imaging\Helpers\ImageHelper.cs" />
+    <Compile Include="Imaging\Helpers\Pixel.cs" />
+    <Compile Include="Imaging\Helpers\Pixels\IIndexedPixel.cs" />
+    <Compile Include="Imaging\Helpers\Pixels\Indexed\PixelData1Indexed.cs" />
+    <Compile Include="Imaging\Helpers\Pixels\Indexed\PixelData4Indexed.cs" />
+    <Compile Include="Imaging\Helpers\Pixels\Indexed\PixelData8Indexed.cs" />
+    <Compile Include="Imaging\Helpers\Pixels\INonIndexedPixel.cs" />
+    <Compile Include="Imaging\Helpers\Pixels\NonIndexed\PixelDataArgb1555.cs" />
+    <Compile Include="Imaging\Helpers\Pixels\NonIndexed\PixelDataArgb64.cs" />
+    <Compile Include="Imaging\Helpers\Pixels\NonIndexed\PixelDataArgb8888.cs" />
+    <Compile Include="Imaging\Helpers\Pixels\NonIndexed\PixelDataGray16.cs" />
+    <Compile Include="Imaging\Helpers\Pixels\NonIndexed\PixelDataRgb48.cs" />
+    <Compile Include="Imaging\Helpers\Pixels\NonIndexed\PixelDataRgb555.cs" />
+    <Compile Include="Imaging\Helpers\Pixels\NonIndexed\PixelDataRgb565.cs" />
+    <Compile Include="Imaging\Helpers\Pixels\NonIndexed\PixelDataRgb888.cs" />
+    <Compile Include="Imaging\Helpers\Pixels\NonIndexed\PixelDataRgb8888.cs" />
+    <Compile Include="Imaging\Helpers\PixelTransform.cs" />
+    <Compile Include="Imaging\Helpers\QuantizationHelper.cs" />
+    <Compile Include="Imaging\Helpers\TplHelper.cs" />
+    <Compile Include="Imaging\PathProviders\IPathProvider.cs" />
+    <Compile Include="Imaging\PathProviders\ReversedPathProvider.cs" />
+    <Compile Include="Imaging\PathProviders\SerpentinePathProvider.cs" />
+    <Compile Include="Imaging\PathProviders\StandardPathProvider.cs" />
+    <Compile Include="App\Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Quantizers\BaseColorCacheQuantizer.cs" />
-    <Compile Include="Quantizers\BaseColorQuantizer.cs" />
-    <Compile Include="Quantizers\DistinctSelection\DistinctBucket.cs" />
-    <Compile Include="Quantizers\DistinctSelection\DistinctColorInfo.cs" />
-    <Compile Include="Quantizers\DistinctSelection\DistinctSelectionQuantizer.cs" />
-    <Compile Include="Quantizers\IColorQuantizer.cs" />
-    <Compile Include="Quantizers\MedianCut\MedianCutCube.cs" />
-    <Compile Include="Quantizers\MedianCut\MedianCutQuantizer.cs" />
-    <Compile Include="Quantizers\NeuQuant\NeuralColorQuantizer.cs" />
-    <Compile Include="Quantizers\Octree\OctreeNode.cs" />
-    <Compile Include="Quantizers\Octree\OctreeQuantizer.cs" />
-    <Compile Include="Quantizers\OptimalPalette\OptimalPaletteQuantizer.cs" />
-    <Compile Include="Quantizers\Popularity\PopularityColorSlot.cs" />
-    <Compile Include="Quantizers\Popularity\PopularityQuantizer.cs" />
-    <Compile Include="Quantizers\Uniform\UniformColorSlot.cs" />
-    <Compile Include="Quantizers\Uniform\UniformQuantizer.cs" />
-    <Compile Include="Quantizers\XiaolinWu\WuColorCube.cs" />
-    <Compile Include="Quantizers\XiaolinWu\WuColorQuantizer.cs" />
-    <Compile Include="Struts\TPLDefinition.cs" />
-    <EmbeddedResource Include="Credits.resx">
+    <Compile Include="Imaging\Quantizers\BaseColorCacheQuantizer.cs" />
+    <Compile Include="Imaging\Quantizers\BaseColorQuantizer.cs" />
+    <Compile Include="Imaging\Quantizers\DistinctSelection\DistinctBucket.cs" />
+    <Compile Include="Imaging\Quantizers\DistinctSelection\DistinctColorInfo.cs" />
+    <Compile Include="Imaging\Quantizers\DistinctSelection\DistinctSelectionQuantizer.cs" />
+    <Compile Include="Imaging\Quantizers\IColorQuantizer.cs" />
+    <Compile Include="Imaging\Quantizers\MedianCut\MedianCutCube.cs" />
+    <Compile Include="Imaging\Quantizers\MedianCut\MedianCutQuantizer.cs" />
+    <Compile Include="Imaging\Quantizers\NeuQuant\NeuralColorQuantizer.cs" />
+    <Compile Include="Imaging\Quantizers\Octree\OctreeNode.cs" />
+    <Compile Include="Imaging\Quantizers\Octree\OctreeQuantizer.cs" />
+    <Compile Include="Imaging\Quantizers\OptimalPalette\OptimalPaletteQuantizer.cs" />
+    <Compile Include="Imaging\Quantizers\Popularity\PopularityColorSlot.cs" />
+    <Compile Include="Imaging\Quantizers\Popularity\PopularityQuantizer.cs" />
+    <Compile Include="Imaging\Quantizers\Uniform\UniformColorSlot.cs" />
+    <Compile Include="Imaging\Quantizers\Uniform\UniformQuantizer.cs" />
+    <Compile Include="Imaging\Quantizers\XiaolinWu\WuColorCube.cs" />
+    <Compile Include="Imaging\Quantizers\XiaolinWu\WuColorQuantizer.cs" />
+    <Compile Include="Core\Formats\TPLDefinition.cs" />
+    <EmbeddedResource Include="UI\Forms\Credits.resx">
       <DependentUpon>Credits.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="Dialog\DialogGetColor.resx">
+    <EmbeddedResource Include="UI\Dialogs\DialogGetColor.resx">
       <DependentUpon>DialogGetColor.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="Dialog\DialogGetIndex.resx">
+    <EmbeddedResource Include="UI\Dialogs\DialogGetIndex.resx">
       <DependentUpon>DialogGetIndex.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="FrmMain.resx">
+    <EmbeddedResource Include="UI\Forms\FrmMain.resx">
       <DependentUpon>FrmMain.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">

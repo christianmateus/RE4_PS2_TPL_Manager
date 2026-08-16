@@ -63,9 +63,6 @@
             this.toolStripSeparator15 = new System.Windows.Forms.ToolStripSeparator();
             this.extractTPLFromSMDToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.importTPLToSMDToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.toolStripSeparator14 = new System.Windows.Forms.ToolStripSeparator();
-            this.fixBrokenTPLexperimentalToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.fixTransparencyToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.optionsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.includeMipmapToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator3 = new System.Windows.Forms.ToolStripSeparator();
@@ -110,6 +107,13 @@
             this.spinPixelate = new System.Windows.Forms.NumericUpDown();
             this.label11 = new System.Windows.Forms.Label();
             this.spinBrightness = new System.Windows.Forms.NumericUpDown();
+            this.trackBrightness = new System.Windows.Forms.TrackBar();
+            this.trackContrast = new System.Windows.Forms.TrackBar();
+            this.trackSaturation = new System.Windows.Forms.TrackBar();
+            this.trackHue = new System.Windows.Forms.TrackBar();
+            this.trackSharpen = new System.Windows.Forms.TrackBar();
+            this.trackPixelate = new System.Windows.Forms.TrackBar();
+            this.editorChangesLabel = new System.Windows.Forms.Label();
             this.spinSharpen = new System.Windows.Forms.NumericUpDown();
             this.label3 = new System.Windows.Forms.Label();
             this.label6 = new System.Windows.Forms.Label();
@@ -119,6 +123,7 @@
             this.label5 = new System.Windows.Forms.Label();
             this.groupBox2 = new System.Windows.Forms.GroupBox();
             this.panel5 = new System.Windows.Forms.Panel();
+            this.labelTransform = new System.Windows.Forms.Label();
             this.btnLayerOverlay = new System.Windows.Forms.Button();
             this.btnLayerAddMask = new System.Windows.Forms.Button();
             this.label9 = new System.Windows.Forms.Label();
@@ -128,8 +133,7 @@
             this.btnFilterComic = new System.Windows.Forms.Button();
             this.label8 = new System.Windows.Forms.Label();
             this.btnReset = new System.Windows.Forms.Button();
-            this.btnUpscale = new System.Windows.Forms.Button();
-            this.btnDownscale = new System.Windows.Forms.Button();
+            this.btnResize = new System.Windows.Forms.Button();
             this.button1 = new System.Windows.Forms.Button();
             this.btnFlipY = new System.Windows.Forms.Button();
             this.btnFlipX = new System.Windows.Forms.Button();
@@ -162,6 +166,12 @@
             ((System.ComponentModel.ISupportInitialize)(this.spinSharpen)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.spinSaturation)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.spinContrast)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.trackBrightness)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.trackContrast)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.trackSaturation)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.trackHue)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.trackSharpen)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.trackPixelate)).BeginInit();
             this.groupBox2.SuspendLayout();
             this.panel5.SuspendLayout();
             this.panel4.SuspendLayout();
@@ -182,7 +192,7 @@
             this.menuStrip1.LayoutStyle = System.Windows.Forms.ToolStripLayoutStyle.HorizontalStackWithOverflow;
             this.menuStrip1.Location = new System.Drawing.Point(0, 0);
             this.menuStrip1.Name = "menuStrip1";
-            this.menuStrip1.Size = new System.Drawing.Size(951, 24);
+            this.menuStrip1.Size = new System.Drawing.Size(1200, 24);
             this.menuStrip1.TabIndex = 0;
             this.menuStrip1.Text = "menuStrip1";
             // 
@@ -386,10 +396,7 @@
             this.extractTPLFromEFFToolStripMenuItem,
             this.toolStripSeparator15,
             this.extractTPLFromSMDToolStripMenuItem,
-            this.importTPLToSMDToolStripMenuItem,
-            this.toolStripSeparator14,
-            this.fixBrokenTPLexperimentalToolStripMenuItem,
-            this.fixTransparencyToolStripMenuItem});
+            this.importTPLToSMDToolStripMenuItem});
             this.toolsToolStripMenuItem.Name = "toolsToolStripMenuItem";
             this.toolsToolStripMenuItem.Size = new System.Drawing.Size(46, 20);
             this.toolsToolStripMenuItem.Text = "Tools";
@@ -448,25 +455,6 @@
             this.importTPLToSMDToolStripMenuItem.Size = new System.Drawing.Size(231, 22);
             this.importTPLToSMDToolStripMenuItem.Text = "Inject TPL into .SMD";
             this.importTPLToSMDToolStripMenuItem.Click += new System.EventHandler(this.importTPLToSMDToolStripMenuItem_Click);
-            // 
-            // toolStripSeparator14
-            // 
-            this.toolStripSeparator14.Name = "toolStripSeparator14";
-            this.toolStripSeparator14.Size = new System.Drawing.Size(228, 6);
-            // 
-            // fixBrokenTPLexperimentalToolStripMenuItem
-            // 
-            this.fixBrokenTPLexperimentalToolStripMenuItem.Name = "fixBrokenTPLexperimentalToolStripMenuItem";
-            this.fixBrokenTPLexperimentalToolStripMenuItem.Size = new System.Drawing.Size(231, 22);
-            this.fixBrokenTPLexperimentalToolStripMenuItem.Text = "Fix broken TPL (experimental)";
-            this.fixBrokenTPLexperimentalToolStripMenuItem.Click += new System.EventHandler(this.fixBrokenTPLexperimentalToolStripMenuItem_Click);
-            // 
-            // fixTransparencyToolStripMenuItem
-            // 
-            this.fixTransparencyToolStripMenuItem.Name = "fixTransparencyToolStripMenuItem";
-            this.fixTransparencyToolStripMenuItem.Size = new System.Drawing.Size(231, 22);
-            this.fixTransparencyToolStripMenuItem.Text = "Fix transparency";
-            this.fixTransparencyToolStripMenuItem.Click += new System.EventHandler(this.fixTransparencyToolStripMenuItem_Click);
             // 
             // optionsToolStripMenuItem
             // 
@@ -591,7 +579,7 @@
             this.panel2.Controls.Add(this.label1);
             this.panel2.Location = new System.Drawing.Point(572, 27);
             this.panel2.Name = "panel2";
-            this.panel2.Size = new System.Drawing.Size(374, 21);
+            this.panel2.Size = new System.Drawing.Size(622, 21);
             this.panel2.TabIndex = 7;
             // 
             // label1
@@ -601,7 +589,7 @@
             this.label1.ForeColor = System.Drawing.Color.White;
             this.label1.Location = new System.Drawing.Point(0, 0);
             this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(372, 19);
+            this.label1.Size = new System.Drawing.Size(620, 19);
             this.label1.TabIndex = 0;
             this.label1.Text = "Texture Preview";
             this.label1.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
@@ -613,7 +601,7 @@
             this.texturePreview.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.texturePreview.Location = new System.Drawing.Point(572, 54);
             this.texturePreview.Name = "texturePreview";
-            this.texturePreview.Size = new System.Drawing.Size(374, 247);
+            this.texturePreview.Size = new System.Drawing.Size(622, 270);
             this.texturePreview.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Normal;
             this.texturePreview.TabIndex = 5;
             this.texturePreview.TabStop = false;
@@ -631,9 +619,10 @@
             this.table.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             this.table.Location = new System.Drawing.Point(0, 27);
             this.table.Name = "table";
-            this.table.Size = new System.Drawing.Size(566, 501);
+            this.table.Size = new System.Drawing.Size(566, 631);
             this.table.TabIndex = 4;
             this.table.CellClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.table_CellClick);
+            this.table.CellDoubleClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.table_CellDoubleClick);
             this.table.CellEnter += new System.Windows.Forms.DataGridViewCellEventHandler(this.table_CellEnter);
             this.table.CellMouseDown += new System.Windows.Forms.DataGridViewCellMouseEventHandler(this.table_CellMouseDown);
             this.table.DragDrop += new System.Windows.Forms.DragEventHandler(this.table_DragDrop);
@@ -750,9 +739,9 @@
             this.statusStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.progressBar,
             this.lblStatusText});
-            this.statusStrip1.Location = new System.Drawing.Point(0, 531);
+            this.statusStrip1.Location = new System.Drawing.Point(0, 665);
             this.statusStrip1.Name = "statusStrip1";
-            this.statusStrip1.Size = new System.Drawing.Size(951, 22);
+            this.statusStrip1.Size = new System.Drawing.Size(1200, 22);
             this.statusStrip1.TabIndex = 12;
             this.statusStrip1.Text = "statusStrip1";
             // 
@@ -775,9 +764,9 @@
             this.panel1.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(50)))), ((int)(((byte)(50)))), ((int)(((byte)(50)))));
             this.panel1.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.panel1.Controls.Add(this.label2);
-            this.panel1.Location = new System.Drawing.Point(572, 307);
+            this.panel1.Location = new System.Drawing.Point(572, 331);
             this.panel1.Name = "panel1";
-            this.panel1.Size = new System.Drawing.Size(374, 21);
+            this.panel1.Size = new System.Drawing.Size(622, 21);
             this.panel1.TabIndex = 8;
             // 
             // label2
@@ -787,7 +776,7 @@
             this.label2.ForeColor = System.Drawing.Color.White;
             this.label2.Location = new System.Drawing.Point(0, 0);
             this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(372, 19);
+            this.label2.Size = new System.Drawing.Size(620, 19);
             this.label2.TabIndex = 0;
             this.label2.Text = "Editor";
             this.label2.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
@@ -796,21 +785,26 @@
             // 
             this.groupBox1.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left)));
-            this.groupBox1.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(30)))), ((int)(((byte)(30)))), ((int)(((byte)(50)))));
+            this.groupBox1.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(28)))), ((int)(((byte)(28)))), ((int)(((byte)(28)))));
             this.groupBox1.Controls.Add(this.panel3);
-            this.groupBox1.ForeColor = System.Drawing.Color.White;
-            this.groupBox1.Location = new System.Drawing.Point(4, 3);
+            this.groupBox1.ForeColor = System.Drawing.Color.Gainsboro;
+            this.groupBox1.Location = new System.Drawing.Point(8, 7);
             this.groupBox1.Name = "groupBox1";
-            this.groupBox1.Size = new System.Drawing.Size(176, 188);
+            this.groupBox1.Padding = new System.Windows.Forms.Padding(10, 8, 10, 8);
+            this.groupBox1.Size = new System.Drawing.Size(280, 286);
             this.groupBox1.TabIndex = 13;
             this.groupBox1.TabStop = false;
-            this.groupBox1.Text = "Adjustments";
+            this.groupBox1.Text = "QUICK ADJUSTMENTS";
             // 
             // panel3
             // 
-            this.panel3.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left)));
-            this.panel3.AutoScroll = true;
+            this.panel3.Controls.Add(this.editorChangesLabel);
+            this.panel3.Controls.Add(this.trackPixelate);
+            this.panel3.Controls.Add(this.trackSharpen);
+            this.panel3.Controls.Add(this.trackHue);
+            this.panel3.Controls.Add(this.trackSaturation);
+            this.panel3.Controls.Add(this.trackContrast);
+            this.panel3.Controls.Add(this.trackBrightness);
             this.panel3.Controls.Add(this.spinHue);
             this.panel3.Controls.Add(this.label7);
             this.panel3.Controls.Add(this.spinPixelate);
@@ -823,126 +817,68 @@
             this.panel3.Controls.Add(this.spinSaturation);
             this.panel3.Controls.Add(this.spinContrast);
             this.panel3.Controls.Add(this.label5);
-            this.panel3.Location = new System.Drawing.Point(4, 19);
+            this.panel3.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.panel3.Location = new System.Drawing.Point(10, 23);
             this.panel3.Name = "panel3";
-            this.panel3.Size = new System.Drawing.Size(166, 163);
+            this.panel3.Size = new System.Drawing.Size(260, 255);
             this.panel3.TabIndex = 8;
-            // 
-            // spinHue
-            // 
-            this.spinHue.Location = new System.Drawing.Point(88, 161);
-            this.spinHue.Maximum = new decimal(new int[] {
-            359,
-            0,
-            0,
-            0});
-            this.spinHue.Name = "spinHue";
-            this.spinHue.Size = new System.Drawing.Size(57, 20);
-            this.spinHue.TabIndex = 11;
-            this.spinHue.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
-            this.spinHue.ValueChanged += new System.EventHandler(this.spinHue_ValueChanged);
-            // 
-            // label7
-            // 
-            this.label7.AutoSize = true;
-            this.label7.Location = new System.Drawing.Point(16, 163);
-            this.label7.Name = "label7";
-            this.label7.Size = new System.Drawing.Size(27, 13);
-            this.label7.TabIndex = 10;
-            this.label7.Text = "Hue";
-            // 
-            // spinPixelate
-            // 
-            this.spinPixelate.Location = new System.Drawing.Point(88, 131);
-            this.spinPixelate.Name = "spinPixelate";
-            this.spinPixelate.Size = new System.Drawing.Size(57, 20);
-            this.spinPixelate.TabIndex = 9;
-            this.spinPixelate.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
-            this.spinPixelate.ValueChanged += new System.EventHandler(this.spinPixelate_ValueChanged);
-            // 
-            // label11
-            // 
-            this.label11.AutoSize = true;
-            this.label11.Location = new System.Drawing.Point(16, 133);
-            this.label11.Name = "label11";
-            this.label11.Size = new System.Drawing.Size(44, 13);
-            this.label11.TabIndex = 8;
-            this.label11.Text = "Pixelate";
-            // 
-            // spinBrightness
-            // 
-            this.spinBrightness.Location = new System.Drawing.Point(88, 9);
-            this.spinBrightness.Minimum = new decimal(new int[] {
-            100,
-            0,
-            0,
-            -2147483648});
-            this.spinBrightness.Name = "spinBrightness";
-            this.spinBrightness.Size = new System.Drawing.Size(57, 20);
-            this.spinBrightness.TabIndex = 1;
-            this.spinBrightness.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
-            this.spinBrightness.ValueChanged += new System.EventHandler(this.spinBrightness_ValueChanged);
-            // 
-            // spinSharpen
-            // 
-            this.spinSharpen.Location = new System.Drawing.Point(88, 100);
-            this.spinSharpen.Name = "spinSharpen";
-            this.spinSharpen.Size = new System.Drawing.Size(57, 20);
-            this.spinSharpen.TabIndex = 7;
-            this.spinSharpen.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
-            this.spinSharpen.ValueChanged += new System.EventHandler(this.spinSharpen_ValueChanged);
             // 
             // label3
             // 
             this.label3.AutoSize = true;
-            this.label3.Location = new System.Drawing.Point(16, 12);
+            this.label3.Location = new System.Drawing.Point(2, 14);
             this.label3.Name = "label3";
-            this.label3.Size = new System.Drawing.Size(56, 13);
-            this.label3.TabIndex = 0;
+            this.label3.Size = new System.Drawing.Size(61, 15);
             this.label3.Text = "Brightness";
             // 
-            // label6
+            // trackBrightness
             // 
-            this.label6.AutoSize = true;
-            this.label6.Location = new System.Drawing.Point(16, 102);
-            this.label6.Name = "label6";
-            this.label6.Size = new System.Drawing.Size(47, 13);
-            this.label6.TabIndex = 6;
-            this.label6.Text = "Sharpen";
+            this.trackBrightness.Location = new System.Drawing.Point(78, 7);
+            this.trackBrightness.Maximum = 100;
+            this.trackBrightness.Minimum = -100;
+            this.trackBrightness.Name = "trackBrightness";
+            this.trackBrightness.Size = new System.Drawing.Size(118, 30);
+            this.trackBrightness.TabIndex = 30;
+            this.trackBrightness.TickStyle = System.Windows.Forms.TickStyle.None;
+            this.trackBrightness.ValueChanged += new System.EventHandler(this.trackBrightness_ValueChanged);
+            // 
+            // spinBrightness
+            // 
+            this.spinBrightness.Location = new System.Drawing.Point(202, 9);
+            this.spinBrightness.Maximum = new decimal(new int[] {100, 0, 0, 0});
+            this.spinBrightness.Minimum = new decimal(new int[] {100, 0, 0, -2147483648});
+            this.spinBrightness.Name = "spinBrightness";
+            this.spinBrightness.Size = new System.Drawing.Size(52, 23);
+            this.spinBrightness.TabIndex = 1;
+            this.spinBrightness.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
+            this.spinBrightness.ValueChanged += new System.EventHandler(this.spinBrightness_ValueChanged);
             // 
             // label4
             // 
             this.label4.AutoSize = true;
-            this.label4.Location = new System.Drawing.Point(16, 42);
+            this.label4.Location = new System.Drawing.Point(2, 51);
             this.label4.Name = "label4";
-            this.label4.Size = new System.Drawing.Size(46, 13);
-            this.label4.TabIndex = 2;
+            this.label4.Size = new System.Drawing.Size(50, 15);
             this.label4.Text = "Contrast";
             // 
-            // spinSaturation
+            // trackContrast
             // 
-            this.spinSaturation.Location = new System.Drawing.Point(88, 70);
-            this.spinSaturation.Minimum = new decimal(new int[] {
-            100,
-            0,
-            0,
-            -2147483648});
-            this.spinSaturation.Name = "spinSaturation";
-            this.spinSaturation.Size = new System.Drawing.Size(57, 20);
-            this.spinSaturation.TabIndex = 5;
-            this.spinSaturation.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
-            this.spinSaturation.ValueChanged += new System.EventHandler(this.spinSaturation_ValueChanged);
+            this.trackContrast.Location = new System.Drawing.Point(78, 44);
+            this.trackContrast.Maximum = 100;
+            this.trackContrast.Minimum = -100;
+            this.trackContrast.Name = "trackContrast";
+            this.trackContrast.Size = new System.Drawing.Size(118, 30);
+            this.trackContrast.TabIndex = 31;
+            this.trackContrast.TickStyle = System.Windows.Forms.TickStyle.None;
+            this.trackContrast.ValueChanged += new System.EventHandler(this.trackContrast_ValueChanged);
             // 
             // spinContrast
             // 
-            this.spinContrast.Location = new System.Drawing.Point(88, 40);
-            this.spinContrast.Minimum = new decimal(new int[] {
-            100,
-            0,
-            0,
-            -2147483648});
+            this.spinContrast.Location = new System.Drawing.Point(202, 46);
+            this.spinContrast.Maximum = new decimal(new int[] {100, 0, 0, 0});
+            this.spinContrast.Minimum = new decimal(new int[] {100, 0, 0, -2147483648});
             this.spinContrast.Name = "spinContrast";
-            this.spinContrast.Size = new System.Drawing.Size(57, 20);
+            this.spinContrast.Size = new System.Drawing.Size(52, 23);
             this.spinContrast.TabIndex = 3;
             this.spinContrast.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
             this.spinContrast.ValueChanged += new System.EventHandler(this.spinContrast_ValueChanged);
@@ -950,228 +886,329 @@
             // label5
             // 
             this.label5.AutoSize = true;
-            this.label5.Location = new System.Drawing.Point(16, 72);
+            this.label5.Location = new System.Drawing.Point(2, 88);
             this.label5.Name = "label5";
-            this.label5.Size = new System.Drawing.Size(55, 13);
-            this.label5.TabIndex = 4;
+            this.label5.Size = new System.Drawing.Size(61, 15);
             this.label5.Text = "Saturation";
+            // 
+            // trackSaturation
+            // 
+            this.trackSaturation.Location = new System.Drawing.Point(78, 81);
+            this.trackSaturation.Maximum = 100;
+            this.trackSaturation.Minimum = -100;
+            this.trackSaturation.Name = "trackSaturation";
+            this.trackSaturation.Size = new System.Drawing.Size(118, 30);
+            this.trackSaturation.TabIndex = 32;
+            this.trackSaturation.TickStyle = System.Windows.Forms.TickStyle.None;
+            this.trackSaturation.ValueChanged += new System.EventHandler(this.trackSaturation_ValueChanged);
+            // 
+            // spinSaturation
+            // 
+            this.spinSaturation.Location = new System.Drawing.Point(202, 83);
+            this.spinSaturation.Maximum = new decimal(new int[] {100, 0, 0, 0});
+            this.spinSaturation.Minimum = new decimal(new int[] {100, 0, 0, -2147483648});
+            this.spinSaturation.Name = "spinSaturation";
+            this.spinSaturation.Size = new System.Drawing.Size(52, 23);
+            this.spinSaturation.TabIndex = 5;
+            this.spinSaturation.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
+            this.spinSaturation.ValueChanged += new System.EventHandler(this.spinSaturation_ValueChanged);
+            // 
+            // label7
+            // 
+            this.label7.AutoSize = true;
+            this.label7.Location = new System.Drawing.Point(2, 125);
+            this.label7.Name = "label7";
+            this.label7.Size = new System.Drawing.Size(28, 15);
+            this.label7.Text = "Hue";
+            // 
+            // trackHue
+            // 
+            this.trackHue.Location = new System.Drawing.Point(78, 118);
+            this.trackHue.Maximum = 359;
+            this.trackHue.Name = "trackHue";
+            this.trackHue.Size = new System.Drawing.Size(118, 30);
+            this.trackHue.TabIndex = 33;
+            this.trackHue.TickStyle = System.Windows.Forms.TickStyle.None;
+            this.trackHue.ValueChanged += new System.EventHandler(this.trackHue_ValueChanged);
+            // 
+            // spinHue
+            // 
+            this.spinHue.Location = new System.Drawing.Point(202, 120);
+            this.spinHue.Maximum = new decimal(new int[] {359, 0, 0, 0});
+            this.spinHue.Name = "spinHue";
+            this.spinHue.Size = new System.Drawing.Size(52, 23);
+            this.spinHue.TabIndex = 11;
+            this.spinHue.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
+            this.spinHue.ValueChanged += new System.EventHandler(this.spinHue_ValueChanged);
+            // 
+            // label6
+            // 
+            this.label6.AutoSize = true;
+            this.label6.Location = new System.Drawing.Point(2, 162);
+            this.label6.Name = "label6";
+            this.label6.Size = new System.Drawing.Size(48, 15);
+            this.label6.Text = "Sharpen";
+            // 
+            // trackSharpen
+            // 
+            this.trackSharpen.Location = new System.Drawing.Point(78, 155);
+            this.trackSharpen.Maximum = 100;
+            this.trackSharpen.Name = "trackSharpen";
+            this.trackSharpen.Size = new System.Drawing.Size(118, 30);
+            this.trackSharpen.TabIndex = 34;
+            this.trackSharpen.TickStyle = System.Windows.Forms.TickStyle.None;
+            this.trackSharpen.ValueChanged += new System.EventHandler(this.trackSharpen_ValueChanged);
+            // 
+            // spinSharpen
+            // 
+            this.spinSharpen.Location = new System.Drawing.Point(202, 157);
+            this.spinSharpen.Maximum = new decimal(new int[] {100, 0, 0, 0});
+            this.spinSharpen.Name = "spinSharpen";
+            this.spinSharpen.Size = new System.Drawing.Size(52, 23);
+            this.spinSharpen.TabIndex = 7;
+            this.spinSharpen.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
+            this.spinSharpen.ValueChanged += new System.EventHandler(this.spinSharpen_ValueChanged);
+            // 
+            // label11
+            // 
+            this.label11.AutoSize = true;
+            this.label11.Location = new System.Drawing.Point(2, 199);
+            this.label11.Name = "label11";
+            this.label11.Size = new System.Drawing.Size(47, 15);
+            this.label11.Text = "Pixelate";
+            // 
+            // trackPixelate
+            // 
+            this.trackPixelate.Location = new System.Drawing.Point(78, 192);
+            this.trackPixelate.Maximum = 100;
+            this.trackPixelate.Name = "trackPixelate";
+            this.trackPixelate.Size = new System.Drawing.Size(118, 30);
+            this.trackPixelate.TabIndex = 35;
+            this.trackPixelate.TickStyle = System.Windows.Forms.TickStyle.None;
+            this.trackPixelate.ValueChanged += new System.EventHandler(this.trackPixelate_ValueChanged);
+            // 
+            // spinPixelate
+            // 
+            this.spinPixelate.Location = new System.Drawing.Point(202, 194);
+            this.spinPixelate.Maximum = new decimal(new int[] {100, 0, 0, 0});
+            this.spinPixelate.Name = "spinPixelate";
+            this.spinPixelate.Size = new System.Drawing.Size(52, 23);
+            this.spinPixelate.TabIndex = 9;
+            this.spinPixelate.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
+            this.spinPixelate.ValueChanged += new System.EventHandler(this.spinPixelate_ValueChanged);
+            // 
+            // editorChangesLabel
+            // 
+            this.editorChangesLabel.ForeColor = System.Drawing.Color.Gray;
+            this.editorChangesLabel.Location = new System.Drawing.Point(2, 229);
+            this.editorChangesLabel.Name = "editorChangesLabel";
+            this.editorChangesLabel.Size = new System.Drawing.Size(252, 20);
+            this.editorChangesLabel.Text = "No pending changes";
+            this.editorChangesLabel.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
             // groupBox2
             // 
             this.groupBox2.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.groupBox2.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(30)))), ((int)(((byte)(50)))), ((int)(((byte)(50)))));
+            this.groupBox2.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(28)))), ((int)(((byte)(28)))), ((int)(((byte)(28)))));
             this.groupBox2.Controls.Add(this.panel5);
-            this.groupBox2.ForeColor = System.Drawing.Color.White;
-            this.groupBox2.Location = new System.Drawing.Point(186, 3);
+            this.groupBox2.ForeColor = System.Drawing.Color.Gainsboro;
+            this.groupBox2.Location = new System.Drawing.Point(296, 7);
             this.groupBox2.Name = "groupBox2";
-            this.groupBox2.Size = new System.Drawing.Size(181, 188);
+            this.groupBox2.Padding = new System.Windows.Forms.Padding(10, 8, 10, 8);
+            this.groupBox2.Size = new System.Drawing.Size(318, 286);
             this.groupBox2.TabIndex = 14;
             this.groupBox2.TabStop = false;
-            this.groupBox2.Text = "Properties";
+            this.groupBox2.Text = "TOOLS";
             // 
             // panel5
             // 
-            this.panel5.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.panel5.AutoScroll = true;
-            this.panel5.Controls.Add(this.btnLayerOverlay);
-            this.panel5.Controls.Add(this.btnLayerAddMask);
-            this.panel5.Controls.Add(this.label9);
-            this.panel5.Controls.Add(this.btnFilterGray);
-            this.panel5.Controls.Add(this.btnFilterInvert);
-            this.panel5.Controls.Add(this.btnFilterColorful);
-            this.panel5.Controls.Add(this.btnFilterComic);
-            this.panel5.Controls.Add(this.label8);
-            this.panel5.Controls.Add(this.btnReset);
-            this.panel5.Controls.Add(this.btnUpscale);
-            this.panel5.Controls.Add(this.btnDownscale);
-            this.panel5.Controls.Add(this.button1);
-            this.panel5.Controls.Add(this.btnFlipY);
-            this.panel5.Controls.Add(this.btnFlipX);
+            this.panel5.Controls.Add(this.labelTransform);
             this.panel5.Controls.Add(this.btnRotate);
-            this.panel5.Location = new System.Drawing.Point(7, 19);
+            this.panel5.Controls.Add(this.btnResize);
+            this.panel5.Controls.Add(this.btnFlipX);
+            this.panel5.Controls.Add(this.btnFlipY);
+            this.panel5.Controls.Add(this.label8);
+            this.panel5.Controls.Add(this.btnFilterComic);
+            this.panel5.Controls.Add(this.btnFilterGray);
+            this.panel5.Controls.Add(this.btnFilterColorful);
+            this.panel5.Controls.Add(this.btnFilterInvert);
+            this.panel5.Controls.Add(this.label9);
+            this.panel5.Controls.Add(this.btnLayerAddMask);
+            this.panel5.Controls.Add(this.btnLayerOverlay);
+            this.panel5.Controls.Add(this.btnReset);
+            this.panel5.Controls.Add(this.button1);
+            this.panel5.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.panel5.Location = new System.Drawing.Point(10, 23);
             this.panel5.Name = "panel5";
-            this.panel5.Size = new System.Drawing.Size(168, 163);
+            this.panel5.Size = new System.Drawing.Size(298, 255);
             this.panel5.TabIndex = 9;
             // 
-            // btnLayerOverlay
+            // labelTransform
             // 
-            this.btnLayerOverlay.Cursor = System.Windows.Forms.Cursors.Hand;
-            this.btnLayerOverlay.ForeColor = System.Drawing.Color.Black;
-            this.btnLayerOverlay.Location = new System.Drawing.Point(244, 123);
-            this.btnLayerOverlay.Name = "btnLayerOverlay";
-            this.btnLayerOverlay.Size = new System.Drawing.Size(75, 23);
-            this.btnLayerOverlay.TabIndex = 22;
-            this.btnLayerOverlay.Text = "Overlay";
-            this.btnLayerOverlay.UseVisualStyleBackColor = true;
-            this.btnLayerOverlay.Click += new System.EventHandler(this.btnLayerOverlay_Click);
+            this.labelTransform.AutoSize = true;
+            this.labelTransform.Font = new System.Drawing.Font("Segoe UI", 8.25F, System.Drawing.FontStyle.Bold);
+            this.labelTransform.ForeColor = System.Drawing.Color.Silver;
+            this.labelTransform.Location = new System.Drawing.Point(2, 4);
+            this.labelTransform.Name = "labelTransform";
+            this.labelTransform.Size = new System.Drawing.Size(70, 13);
+            this.labelTransform.Text = "TRANSFORM";
             // 
-            // btnLayerAddMask
+            // btnRotate
             // 
-            this.btnLayerAddMask.Cursor = System.Windows.Forms.Cursors.Hand;
-            this.btnLayerAddMask.ForeColor = System.Drawing.Color.Black;
-            this.btnLayerAddMask.Location = new System.Drawing.Point(171, 123);
-            this.btnLayerAddMask.Name = "btnLayerAddMask";
-            this.btnLayerAddMask.Size = new System.Drawing.Size(67, 23);
-            this.btnLayerAddMask.TabIndex = 21;
-            this.btnLayerAddMask.Text = "Add mask";
-            this.btnLayerAddMask.UseVisualStyleBackColor = true;
-            this.btnLayerAddMask.Click += new System.EventHandler(this.btnLayerAddMask_Click);
+            this.btnRotate.Cursor = System.Windows.Forms.Cursors.Hand;
+            this.btnRotate.Location = new System.Drawing.Point(4, 24);
+            this.btnRotate.Name = "btnRotate";
+            this.btnRotate.Size = new System.Drawing.Size(92, 28);
+            this.btnRotate.TabIndex = 8;
+            this.btnRotate.Text = "Rotate ↻";
+            this.btnRotate.UseVisualStyleBackColor = true;
+            this.btnRotate.Click += new System.EventHandler(this.btnRotate_Click_1);
             // 
-            // label9
+            // btnResize
             // 
-            this.label9.AutoSize = true;
-            this.label9.Location = new System.Drawing.Point(220, 102);
-            this.label9.Name = "label9";
-            this.label9.Size = new System.Drawing.Size(33, 13);
-            this.label9.TabIndex = 20;
-            this.label9.Text = "Layer";
-            // 
-            // btnFilterGray
-            // 
-            this.btnFilterGray.Cursor = System.Windows.Forms.Cursors.Hand;
-            this.btnFilterGray.ForeColor = System.Drawing.Color.Black;
-            this.btnFilterGray.Location = new System.Drawing.Point(244, 32);
-            this.btnFilterGray.Name = "btnFilterGray";
-            this.btnFilterGray.Size = new System.Drawing.Size(75, 23);
-            this.btnFilterGray.TabIndex = 19;
-            this.btnFilterGray.Text = "Gray";
-            this.btnFilterGray.UseVisualStyleBackColor = true;
-            this.btnFilterGray.Click += new System.EventHandler(this.btnFilterGray_Click);
-            // 
-            // btnFilterInvert
-            // 
-            this.btnFilterInvert.Cursor = System.Windows.Forms.Cursors.Hand;
-            this.btnFilterInvert.ForeColor = System.Drawing.Color.Black;
-            this.btnFilterInvert.Location = new System.Drawing.Point(244, 66);
-            this.btnFilterInvert.Name = "btnFilterInvert";
-            this.btnFilterInvert.Size = new System.Drawing.Size(75, 23);
-            this.btnFilterInvert.TabIndex = 18;
-            this.btnFilterInvert.Text = "Invert";
-            this.btnFilterInvert.UseVisualStyleBackColor = true;
-            this.btnFilterInvert.Click += new System.EventHandler(this.btnFilterInvert_Click);
-            // 
-            // btnFilterColorful
-            // 
-            this.btnFilterColorful.Cursor = System.Windows.Forms.Cursors.Hand;
-            this.btnFilterColorful.ForeColor = System.Drawing.Color.Black;
-            this.btnFilterColorful.Location = new System.Drawing.Point(171, 66);
-            this.btnFilterColorful.Name = "btnFilterColorful";
-            this.btnFilterColorful.Size = new System.Drawing.Size(67, 23);
-            this.btnFilterColorful.TabIndex = 17;
-            this.btnFilterColorful.Text = "Colorful";
-            this.btnFilterColorful.UseVisualStyleBackColor = true;
-            this.btnFilterColorful.Click += new System.EventHandler(this.btnFilterColorful_Click);
-            // 
-            // btnFilterComic
-            // 
-            this.btnFilterComic.Cursor = System.Windows.Forms.Cursors.Hand;
-            this.btnFilterComic.ForeColor = System.Drawing.Color.Black;
-            this.btnFilterComic.Location = new System.Drawing.Point(171, 32);
-            this.btnFilterComic.Name = "btnFilterComic";
-            this.btnFilterComic.Size = new System.Drawing.Size(67, 23);
-            this.btnFilterComic.TabIndex = 16;
-            this.btnFilterComic.Text = "Comic";
-            this.btnFilterComic.UseVisualStyleBackColor = true;
-            this.btnFilterComic.Click += new System.EventHandler(this.btnFilterComic_Click);
-            // 
-            // label8
-            // 
-            this.label8.AutoSize = true;
-            this.label8.Location = new System.Drawing.Point(220, 11);
-            this.label8.Name = "label8";
-            this.label8.Size = new System.Drawing.Size(34, 13);
-            this.label8.TabIndex = 15;
-            this.label8.Text = "Filters";
-            // 
-            // btnReset
-            // 
-            this.btnReset.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(250)))), ((int)(((byte)(200)))), ((int)(((byte)(200)))));
-            this.btnReset.Cursor = System.Windows.Forms.Cursors.Hand;
-            this.btnReset.ForeColor = System.Drawing.Color.Black;
-            this.btnReset.Location = new System.Drawing.Point(83, 86);
-            this.btnReset.Name = "btnReset";
-            this.btnReset.Size = new System.Drawing.Size(75, 23);
-            this.btnReset.TabIndex = 14;
-            this.btnReset.Text = "Reset all";
-            this.btnReset.UseVisualStyleBackColor = false;
-            this.btnReset.Click += new System.EventHandler(this.btnReset_Click);
-            // 
-            // btnUpscale
-            // 
-            this.btnUpscale.Cursor = System.Windows.Forms.Cursors.Hand;
-            this.btnUpscale.ForeColor = System.Drawing.Color.Black;
-            this.btnUpscale.Location = new System.Drawing.Point(83, 18);
-            this.btnUpscale.Name = "btnUpscale";
-            this.btnUpscale.Size = new System.Drawing.Size(75, 23);
-            this.btnUpscale.TabIndex = 13;
-            this.btnUpscale.Text = "Upscale";
-            this.btnUpscale.UseVisualStyleBackColor = true;
-            this.btnUpscale.Click += new System.EventHandler(this.btnUpscale_Click);
-            // 
-            // btnDownscale
-            // 
-            this.btnDownscale.Cursor = System.Windows.Forms.Cursors.Hand;
-            this.btnDownscale.ForeColor = System.Drawing.Color.Black;
-            this.btnDownscale.Location = new System.Drawing.Point(83, 52);
-            this.btnDownscale.Name = "btnDownscale";
-            this.btnDownscale.Size = new System.Drawing.Size(75, 23);
-            this.btnDownscale.TabIndex = 12;
-            this.btnDownscale.Text = "Downscale";
-            this.btnDownscale.UseVisualStyleBackColor = true;
-            this.btnDownscale.Click += new System.EventHandler(this.btnDownscale_Click);
-            // 
-            // button1
-            // 
-            this.button1.BackColor = System.Drawing.Color.PaleTurquoise;
-            this.button1.Cursor = System.Windows.Forms.Cursors.Hand;
-            this.button1.ForeColor = System.Drawing.Color.Black;
-            this.button1.Location = new System.Drawing.Point(10, 123);
-            this.button1.Name = "button1";
-            this.button1.Size = new System.Drawing.Size(148, 23);
-            this.button1.TabIndex = 11;
-            this.button1.Text = "Apply changes";
-            this.button1.UseVisualStyleBackColor = false;
-            this.button1.Click += new System.EventHandler(this.btnApplyChanges_Click_1);
-            // 
-            // btnFlipY
-            // 
-            this.btnFlipY.Cursor = System.Windows.Forms.Cursors.Hand;
-            this.btnFlipY.ForeColor = System.Drawing.Color.Black;
-            this.btnFlipY.Location = new System.Drawing.Point(10, 86);
-            this.btnFlipY.Name = "btnFlipY";
-            this.btnFlipY.Size = new System.Drawing.Size(67, 23);
-            this.btnFlipY.TabIndex = 10;
-            this.btnFlipY.Text = "Flip Y";
-            this.btnFlipY.UseVisualStyleBackColor = true;
-            this.btnFlipY.Click += new System.EventHandler(this.btnFlipY_Click);
+            this.btnResize.Cursor = System.Windows.Forms.Cursors.Hand;
+            this.btnResize.Location = new System.Drawing.Point(102, 24);
+            this.btnResize.Name = "btnResize";
+            this.btnResize.Size = new System.Drawing.Size(92, 28);
+            this.btnResize.TabIndex = 13;
+            this.btnResize.Text = "Resize...";
+            this.btnResize.UseVisualStyleBackColor = true;
+            this.btnResize.Click += new System.EventHandler(this.btnResize_Click);
             // 
             // btnFlipX
             // 
             this.btnFlipX.Cursor = System.Windows.Forms.Cursors.Hand;
-            this.btnFlipX.ForeColor = System.Drawing.Color.Black;
-            this.btnFlipX.Location = new System.Drawing.Point(10, 52);
+            this.btnFlipX.Location = new System.Drawing.Point(4, 58);
             this.btnFlipX.Name = "btnFlipX";
-            this.btnFlipX.Size = new System.Drawing.Size(67, 23);
+            this.btnFlipX.Size = new System.Drawing.Size(92, 28);
             this.btnFlipX.TabIndex = 9;
             this.btnFlipX.Text = "Flip X";
             this.btnFlipX.UseVisualStyleBackColor = true;
             this.btnFlipX.Click += new System.EventHandler(this.btnFlipX_Click);
             // 
-            // btnRotate
+            // btnFlipY
             // 
-            this.btnRotate.Cursor = System.Windows.Forms.Cursors.Hand;
-            this.btnRotate.ForeColor = System.Drawing.Color.Black;
-            this.btnRotate.Location = new System.Drawing.Point(10, 18);
-            this.btnRotate.Name = "btnRotate";
-            this.btnRotate.Size = new System.Drawing.Size(67, 23);
-            this.btnRotate.TabIndex = 8;
-            this.btnRotate.Text = "Rotate";
-            this.btnRotate.UseVisualStyleBackColor = true;
-            this.btnRotate.Click += new System.EventHandler(this.btnRotate_Click_1);
+            this.btnFlipY.Cursor = System.Windows.Forms.Cursors.Hand;
+            this.btnFlipY.Location = new System.Drawing.Point(102, 58);
+            this.btnFlipY.Name = "btnFlipY";
+            this.btnFlipY.Size = new System.Drawing.Size(92, 28);
+            this.btnFlipY.TabIndex = 10;
+            this.btnFlipY.Text = "Flip Y";
+            this.btnFlipY.UseVisualStyleBackColor = true;
+            this.btnFlipY.Click += new System.EventHandler(this.btnFlipY_Click);
+            // 
+            // label8
+            // 
+            this.label8.AutoSize = true;
+            this.label8.Font = new System.Drawing.Font("Segoe UI", 8.25F, System.Drawing.FontStyle.Bold);
+            this.label8.ForeColor = System.Drawing.Color.Silver;
+            this.label8.Location = new System.Drawing.Point(2, 96);
+            this.label8.Name = "label8";
+            this.label8.Size = new System.Drawing.Size(48, 13);
+            this.label8.Text = "FILTERS";
+            // 
+            // btnFilterComic
+            // 
+            this.btnFilterComic.Cursor = System.Windows.Forms.Cursors.Hand;
+            this.btnFilterComic.Location = new System.Drawing.Point(4, 116);
+            this.btnFilterComic.Name = "btnFilterComic";
+            this.btnFilterComic.Size = new System.Drawing.Size(82, 26);
+            this.btnFilterComic.TabIndex = 16;
+            this.btnFilterComic.Text = "Comic";
+            this.btnFilterComic.UseVisualStyleBackColor = true;
+            this.btnFilterComic.Click += new System.EventHandler(this.btnFilterComic_Click);
+            // 
+            // btnFilterGray
+            // 
+            this.btnFilterGray.Cursor = System.Windows.Forms.Cursors.Hand;
+            this.btnFilterGray.Location = new System.Drawing.Point(92, 116);
+            this.btnFilterGray.Name = "btnFilterGray";
+            this.btnFilterGray.Size = new System.Drawing.Size(82, 26);
+            this.btnFilterGray.TabIndex = 19;
+            this.btnFilterGray.Text = "Gray";
+            this.btnFilterGray.UseVisualStyleBackColor = true;
+            this.btnFilterGray.Click += new System.EventHandler(this.btnFilterGray_Click);
+            // 
+            // btnFilterColorful
+            // 
+            this.btnFilterColorful.Cursor = System.Windows.Forms.Cursors.Hand;
+            this.btnFilterColorful.Location = new System.Drawing.Point(4, 148);
+            this.btnFilterColorful.Name = "btnFilterColorful";
+            this.btnFilterColorful.Size = new System.Drawing.Size(82, 26);
+            this.btnFilterColorful.TabIndex = 17;
+            this.btnFilterColorful.Text = "Colorful";
+            this.btnFilterColorful.UseVisualStyleBackColor = true;
+            this.btnFilterColorful.Click += new System.EventHandler(this.btnFilterColorful_Click);
+            // 
+            // btnFilterInvert
+            // 
+            this.btnFilterInvert.Cursor = System.Windows.Forms.Cursors.Hand;
+            this.btnFilterInvert.Location = new System.Drawing.Point(92, 148);
+            this.btnFilterInvert.Name = "btnFilterInvert";
+            this.btnFilterInvert.Size = new System.Drawing.Size(82, 26);
+            this.btnFilterInvert.TabIndex = 18;
+            this.btnFilterInvert.Text = "Invert";
+            this.btnFilterInvert.UseVisualStyleBackColor = true;
+            this.btnFilterInvert.Click += new System.EventHandler(this.btnFilterInvert_Click);
+            // 
+            // label9
+            // 
+            this.label9.AutoSize = true;
+            this.label9.Font = new System.Drawing.Font("Segoe UI", 8.25F, System.Drawing.FontStyle.Bold);
+            this.label9.ForeColor = System.Drawing.Color.Silver;
+            this.label9.Location = new System.Drawing.Point(196, 96);
+            this.label9.Name = "label9";
+            this.label9.Size = new System.Drawing.Size(45, 13);
+            this.label9.Text = "LAYERS";
+            // 
+            // btnLayerAddMask
+            // 
+            this.btnLayerAddMask.Cursor = System.Windows.Forms.Cursors.Hand;
+            this.btnLayerAddMask.Location = new System.Drawing.Point(198, 116);
+            this.btnLayerAddMask.Name = "btnLayerAddMask";
+            this.btnLayerAddMask.Size = new System.Drawing.Size(94, 26);
+            this.btnLayerAddMask.TabIndex = 21;
+            this.btnLayerAddMask.Text = "Add Mask";
+            this.btnLayerAddMask.UseVisualStyleBackColor = true;
+            this.btnLayerAddMask.Click += new System.EventHandler(this.btnLayerAddMask_Click);
+            // 
+            // btnLayerOverlay
+            // 
+            this.btnLayerOverlay.Cursor = System.Windows.Forms.Cursors.Hand;
+            this.btnLayerOverlay.Location = new System.Drawing.Point(198, 148);
+            this.btnLayerOverlay.Name = "btnLayerOverlay";
+            this.btnLayerOverlay.Size = new System.Drawing.Size(94, 26);
+            this.btnLayerOverlay.TabIndex = 22;
+            this.btnLayerOverlay.Text = "Overlay";
+            this.btnLayerOverlay.UseVisualStyleBackColor = true;
+            this.btnLayerOverlay.Click += new System.EventHandler(this.btnLayerOverlay_Click);
+            // 
+            // btnReset
+            // 
+            this.btnReset.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.btnReset.Cursor = System.Windows.Forms.Cursors.Hand;
+            this.btnReset.Location = new System.Drawing.Point(4, 215);
+            this.btnReset.Name = "btnReset";
+            this.btnReset.Size = new System.Drawing.Size(92, 32);
+            this.btnReset.TabIndex = 14;
+            this.btnReset.Text = "Reset";
+            this.btnReset.UseVisualStyleBackColor = true;
+            this.btnReset.Click += new System.EventHandler(this.btnReset_Click);
+            // 
+            // button1
+            // 
+            this.button1.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.button1.Cursor = System.Windows.Forms.Cursors.Hand;
+            this.button1.Location = new System.Drawing.Point(102, 215);
+            this.button1.Name = "button1";
+            this.button1.Size = new System.Drawing.Size(190, 32);
+            this.button1.TabIndex = 11;
+            this.button1.Text = "✓ Apply Changes";
+            this.button1.UseVisualStyleBackColor = true;
+            this.button1.Click += new System.EventHandler(this.btnApplyChanges_Click_1);
             // 
             // panel4
             // 
@@ -1180,11 +1217,10 @@
             | System.Windows.Forms.AnchorStyles.Right)));
             this.panel4.Controls.Add(this.groupBox1);
             this.panel4.Controls.Add(this.groupBox2);
-            this.panel4.Location = new System.Drawing.Point(572, 334);
+            this.panel4.Location = new System.Drawing.Point(572, 358);
             this.panel4.Name = "panel4";
-            this.panel4.Size = new System.Drawing.Size(373, 194);
+            this.panel4.Size = new System.Drawing.Size(622, 300);
             this.panel4.TabIndex = 15;
-            // 
             // ctxPreviewImage
             // 
             this.ctxPreviewImage.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
@@ -1284,7 +1320,7 @@
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.AutoScroll = true;
             this.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(30)))), ((int)(((byte)(30)))), ((int)(((byte)(30)))));
-            this.ClientSize = new System.Drawing.Size(951, 553);
+            this.ClientSize = new System.Drawing.Size(1200, 687);
             this.Controls.Add(this.lblDropHere);
             this.Controls.Add(this.panel4);
             this.Controls.Add(this.panel1);
@@ -1298,7 +1334,7 @@
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.MainMenuStrip = this.menuStrip1;
             this.Name = "FrmMain";
-            this.Text = "RE4 PS2 TPL Manager v1.2.0";
+            this.Text = "RE4 PS2 TPL Manager v1.3.2";
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.FrmMain_FormClosing);
             this.menuStrip1.ResumeLayout(false);
             this.menuStrip1.PerformLayout();
@@ -1318,6 +1354,12 @@
             ((System.ComponentModel.ISupportInitialize)(this.spinSharpen)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.spinSaturation)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.spinContrast)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.trackBrightness)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.trackContrast)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.trackSaturation)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.trackHue)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.trackSharpen)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.trackPixelate)).EndInit();
             this.groupBox2.ResumeLayout(false);
             this.panel5.ResumeLayout(false);
             this.panel5.PerformLayout();
@@ -1377,7 +1419,6 @@
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator10;
         private System.Windows.Forms.ToolStripMenuItem removeMipmapsToolStripMenuItem;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator11;
-        private System.Windows.Forms.ToolStripMenuItem fixBrokenTPLexperimentalToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem createEmptyTPLFileToolStripMenuItem;
         private System.Windows.Forms.Button btnOpenFile;
         private System.Windows.Forms.Button btnCreateNewFile;
@@ -1397,6 +1438,14 @@
         private System.Windows.Forms.NumericUpDown spinBrightness;
         private System.Windows.Forms.Label label3;
         private System.Windows.Forms.Panel panel3;
+        private System.Windows.Forms.TrackBar trackBrightness;
+        private System.Windows.Forms.TrackBar trackContrast;
+        private System.Windows.Forms.TrackBar trackSaturation;
+        private System.Windows.Forms.TrackBar trackHue;
+        private System.Windows.Forms.TrackBar trackSharpen;
+        private System.Windows.Forms.TrackBar trackPixelate;
+        private System.Windows.Forms.Label editorChangesLabel;
+        private System.Windows.Forms.Label labelTransform;
         private System.Windows.Forms.Panel panel4;
         private System.Windows.Forms.NumericUpDown spinPixelate;
         private System.Windows.Forms.Label label11;
@@ -1419,8 +1468,7 @@
         private System.Windows.Forms.ToolStripMenuItem problemsToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem tGAToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem tGAToolStripMenuItem1;
-        private System.Windows.Forms.Button btnUpscale;
-        private System.Windows.Forms.Button btnDownscale;
+        private System.Windows.Forms.Button btnResize;
         private System.Windows.Forms.Button btnReset;
         private System.Windows.Forms.ToolStripMenuItem convertAllToBMPToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem convertAllToTGAToolStripMenuItem;
@@ -1438,13 +1486,11 @@
         private System.Windows.Forms.ToolStripMenuItem animatedViewToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem stopBackgroundTaskToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem extractTPLFromEFFToolStripMenuItem;
-        private System.Windows.Forms.ToolStripSeparator toolStripSeparator14;
         private System.Windows.Forms.Label lblDropHere;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator15;
         private System.Windows.Forms.ToolStripMenuItem extractTPLFromSMDToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem importTPLToSMDToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem pNGToTPLToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem fixTransparencyToolStripMenuItem;
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator16;
         private System.Windows.Forms.ToolStripMenuItem batchReplaceToolStripMenuItem;
     }

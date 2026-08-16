@@ -41,11 +41,9 @@ namespace RE4_PS2_TPL_Manager.Core.Services
             if (sourcePs2 == targetPs2)
                 throw new InvalidOperationException(targetPs2 ? "The selected texture is already in the PS2 interlace family." : "The selected texture is already in the BGRA interlace family.");
 
-            // The current legacy 4-bit PS2 decoder uses a transposed work surface for small non-square
-            // textures. Until that historical behavior is fully verified against game assets, do not risk
-            // rewriting those textures until that 4-bit layout has been validated.
-            if (source.bitDepth == 0x08 && (source.width != source.height || source.width < 32 || (source.width % 32) != 0))
-                throw new NotSupportedException("4-bit BGRA/PS2 conversion is currently limited to square textures of 32x32 or larger, in 32-pixel steps. 8-bit textures may be rectangular.");
+            // Do not pre-reject rectangular 4-bit PS2 textures. RE4 uses valid layouts such as 256x128.
+            // The encoder/decoder below already validate bounds and complete pixel coverage before any
+            // converted payload can be written, so unsupported dimensions still fail safely in memory.
 
             byte[] canonical;
             byte[] convertedPixels;

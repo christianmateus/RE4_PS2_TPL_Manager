@@ -105,6 +105,7 @@
     <Compile Include="Imaging\ColorCaches\Octree\OctreeCacheNode.cs" />
     <Compile Include="Imaging\ColorCaches\Octree\OctreeColorCache.cs" />
     <Compile Include="Core\Services\InterlaceConverter.cs" />
+    <Compile Include="Core\Services\MipmapService.cs" />
     <Compile Include="Core\Services\TextureDecoder.cs" />
     <Compile Include="Core\Services\TextureEncoder.cs" />
     <Compile Include="Core\Services\TplReader.cs" />
@@ -130,6 +131,15 @@
     </Compile>
     <Compile Include="UI\Dialogs\DialogInterlaceConversion.cs">
       <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="UI\Dialogs\DialogMipmapEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="UI\Dialogs\DialogResizeTexture.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="UI\Dialogs\DialogResizeTexture.Designer.cs">
+      <DependentUpon>DialogResizeTexture.cs</DependentUpon>
     </Compile>
     <Compile Include="UI\Dialogs\DialogBatchReplaceMode.cs">
       <SubType>Form</SubType>
@@ -250,6 +260,7 @@
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
     </Compile>
     <None Include="RE4_PS2_TPL_Util_TemporaryKey.pfx" />
+    <None Include="README.md" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
@@ -268,6 +279,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="favicon.ico" />
+    <Content Include="Images\screenshot.png" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

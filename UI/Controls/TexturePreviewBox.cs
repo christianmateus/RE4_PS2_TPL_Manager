@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
@@ -12,6 +12,9 @@ namespace RE4_PS2_TPL_Manager
         private Point dragStart;
         private PointF panStart;
         private bool dragging;
+
+        public bool ShowNavigationHint { get; set; } = true;
+        public string NavigationHint { get; set; } = "Wheel: Zoom  •  Drag: Pan  •  Double-click: Fit";
 
         public TexturePreviewBox()
         {
@@ -75,7 +78,7 @@ namespace RE4_PS2_TPL_Manager
         }
         protected override void OnPaintBackground(PaintEventArgs pevent) { }
         private static void DrawCheckerboard(Graphics g,Rectangle b){g.Clear(Color.FromArgb(24,24,24));const int t=12;using(var a=new SolidBrush(Color.FromArgb(54,54,54)))using(var d=new SolidBrush(Color.FromArgb(40,40,40)))for(int y=0;y<b.Height;y+=t)for(int x=0;x<b.Width;x+=t)g.FillRectangle(((x/t+y/t)%2==0)?a:d,x,y,t,t);}
-        private void DrawInfoBadge(Graphics g,float z){string text=Image.Width+"×"+Image.Height+"  •  "+z.ToString(z>=1?"0.#":"0.00")+"x  •  wheel: zoom  drag: pan  double-click: fit";using(var f=new Font("Segoe UI",8.25f)) {var s=g.MeasureString(text,f);var r=new RectangleF(8,ClientSize.Height-s.Height-14,s.Width+14,s.Height+6);using(var bg=new SolidBrush(Color.FromArgb(200,18,18,18)))using(var fg=new SolidBrush(Color.Gainsboro)){g.FillRectangle(bg,r);g.DrawString(text,f,fg,r.Left+7,r.Top+3);}}}
+        private void DrawInfoBadge(Graphics g,float z){string info=Image.Width+"×"+Image.Height+"  •  "+z.ToString(z>=1?"0.#":"0.00")+"x";string hint=NavigationHint ?? string.Empty;using(var f=new Font("Segoe UI",8.25f)){var si=g.MeasureString(info,f);var sh=ShowNavigationHint?g.MeasureString(hint,f):SizeF.Empty;float h=Math.Max(si.Height,sh.Height)+6;var r=new RectangleF(8,ClientSize.Height-h-8,ClientSize.Width-16,h);using(var bg=new SolidBrush(Color.FromArgb(190,18,18,18)))using(var fg=new SolidBrush(Color.Gainsboro))using(var muted=new SolidBrush(Color.FromArgb(175,190,190,190))){g.FillRectangle(bg,r);g.DrawString(info,f,fg,r.Left+7,r.Top+3);if(ShowNavigationHint)g.DrawString(hint,f,muted,r.Right-sh.Width-7,r.Top+3);}}}
         private void DrawEmptyText(Graphics g){const string text="Select a texture to preview";using(var f=new Font("Segoe UI",9f))using(var b=new SolidBrush(Color.FromArgb(160,200,200,200))){var s=g.MeasureString(text,f);g.DrawString(text,f,b,(ClientSize.Width-s.Width)/2f,(ClientSize.Height-s.Height)/2f);}}
     }
 }

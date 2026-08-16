@@ -25,7 +25,7 @@ namespace RE4_PS2_TPL_Manager
 {
     public partial class FrmMain : Form
     {
-        private const string AppTitle = "RE4 PS2 TPL Manager v1.2.0";
+        private const string AppTitle = "RE4 PS2 TPL Manager v1.3.2";
         // Structs
         TPLDefinition.TPL TPL;
         MipMap MipMap;
@@ -35,6 +35,7 @@ namespace RE4_PS2_TPL_Manager
         readonly TextureDecoder textureDecoder = new TextureDecoder();
         readonly TextureEncoder textureEncoder = new TextureEncoder();
         readonly InterlaceConverter interlaceConverter = new InterlaceConverter();
+        readonly MipmapService mipmapService;
 
         // Global
         OpenFileDialog dialog = new OpenFileDialog();
@@ -44,6 +45,11 @@ namespace RE4_PS2_TPL_Manager
         private ToolStripMenuItem recentFilesMenu;
         private readonly List<string> recentFiles = new List<string>();
         private bool backupCreatedForCurrentFile = false;
+
+        // v1.3.2 non-destructive quick editor state
+        private Bitmap editorBaseImage;
+        private bool suppressEditorEvents;
+        private bool editorHasChanges;
 
         // Legacy mipmap metadata kept for compatibility with older editor routines
         public ushort mipmapCount { get; set; }
@@ -57,6 +63,7 @@ namespace RE4_PS2_TPL_Manager
         {
             InitializeComponent();
             tplWriter = new TplWriter(tplReader);
+            mipmapService = new MipmapService(tplReader, tplWriter, textureEncoder);
             ApplyModernTheme();
             InitializeRecentFilesMenu();
             InitializeInterlaceMenu();
@@ -65,6 +72,7 @@ namespace RE4_PS2_TPL_Manager
         {
             InitializeComponent();
             tplWriter = new TplWriter(tplReader);
+            mipmapService = new MipmapService(tplReader, tplWriter, textureEncoder);
             ApplyModernTheme();
             InitializeRecentFilesMenu();
             InitializeInterlaceMenu();
@@ -1282,16 +1290,50 @@ namespace RE4_PS2_TPL_Manager
                 return;
             }
 
-            // Ask the user to also replace mipmaps. A 'No' answer must not skip table refresh.
-            if (!isBatch && table.Rows.Count > selectedRowIndexGlobal && table.Rows[selectedRowIndexGlobal].Cells[7].Value?.ToString() == "2")
+            // Mipmaps share the parent CLUT. After the main palette changes, their indices must
+            // be regenerated against that same CLUT or distant rendering may show wrong colors.
+            bool hasMipmaps = TPL.mipmapCount > 0;
+            if (isBatch && hasMipmaps)
+            {
+                mipmapService.Regenerate(tplFile, selectedRowIndexGlobal);
+            }
+            else if (!isBatch && hasMipmaps)
             {
                 DialogResult result = MessageBox.Show("Do you want to update mipmaps with this texture as well?\n" +
-                    "(it will be resized automatically).", "Mipmaps detected", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+                    "They will be resized and mapped to the texture's shared CLUT.", "Mipmaps detected", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
                 if (result == DialogResult.Yes) ReplaceMipmaps();
             }
 
             UpdateStatusText("Texture replaced successfully");
             if (!isBatch) RefreshTableAndKeepSelection(selectedRowIndexGlobal);
+        }
+
+        private void OpenMipmapEditor()
+        {
+            if (String.IsNullOrWhiteSpace(filepath) || table.Rows.Count == 0 || selectedRowIndexGlobal < 0) return;
+            try
+            {
+                using (DialogMipmapEditor editor = new DialogMipmapEditor(filepath, selectedRowIndexGlobal, tplReader, mipmapService, EnsureBackup))
+                {
+                    editor.ShowDialog(this);
+                    if (editor.Modified)
+                    {
+                        RefreshTableAndKeepSelection(selectedRowIndexGlobal);
+                        UpdateStatusText(String.IsNullOrWhiteSpace(editor.LastAction) ? "Texture/mipmaps updated" : editor.LastAction);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Mipmap Editor", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+            }
+        }
+
+        private void table_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
+        {
+            if (e.RowIndex < 0 || e.RowIndex >= table.Rows.Count) return;
+            selectedRowIndexGlobal = e.RowIndex;
+            OpenMipmapEditor();
         }
 
         private Bitmap LoadBitmapForImport(string path)
@@ -1326,6 +1368,7 @@ namespace RE4_PS2_TPL_Manager
             TPLDefinition.TPL destination = tplReader.ReadTexture(filepath, selectedRowIndexGlobal);
             TPLDefinition.TPL replacement = textureEncoder.EncodeImage(preview, colorCount, destination.interlace);
             tplWriter.ReplaceTexture(filepath, selectedRowIndexGlobal, replacement);
+            if (destination.mipmapCount > 0) mipmapService.Regenerate(filepath, selectedRowIndexGlobal);
             UpdateStatusText(colorCount == 256 ? "Color depth increased to 256 colors" : "Color depth decreased to 16 colors");
             RefreshTableAndKeepSelection(selectedRowIndexGlobal);
         }
@@ -1338,51 +1381,15 @@ namespace RE4_PS2_TPL_Manager
             selectedRowIndexGlobal = safeIndex;
             table.ClearSelection();
             table.Rows[safeIndex].Selected = true;
-            texturePreview.Image = table.Rows[safeIndex].Cells[0].Value as Bitmap;
+            LoadEditorImage(table.Rows[safeIndex].Cells[0].Value as Image, true);
         }
 
         private void ReplaceMipmaps()
         {
-            ReadTexture(filepath, selectedRowIndexGlobal);
-            if (texturePreview.Image == null || TPL.mipmapCount == 0) return;
-
-            uint[] mipmapOffsets = { TPL.mipmapOffset1, TPL.mipmapOffset2 };
-            int mipmapSlots = Math.Min((int)TPL.mipmapCount, mipmapOffsets.Length);
-
-            using (FileStream stream = File.Open(filepath, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
-            using (BinaryReader reader = new BinaryReader(stream, System.Text.Encoding.Default, true))
-            using (BinaryWriter writer = new BinaryWriter(stream, System.Text.Encoding.Default, true))
-            {
-                for (int mip = 0; mip < mipmapSlots; mip++)
-                {
-                    uint headerOffset = mipmapOffsets[mip];
-                    if (headerOffset == 0 || headerOffset + 0x24 > stream.Length) continue;
-
-                    stream.Position = headerOffset;
-                    ushort width = reader.ReadUInt16();
-                    ushort height = reader.ReadUInt16();
-                    ushort bitDepth = reader.ReadUInt16();
-                    ushort interlace = reader.ReadUInt16();
-                    stream.Position = headerOffset + 0x20;
-                    uint pixelsOffset = reader.ReadUInt32();
-
-                    if (width == 0 || height == 0 || pixelsOffset >= stream.Length) continue;
-
-                    int colorCount = bitDepth == 0x09 ? 256 : 16;
-                    using (Bitmap resized = new Bitmap(texturePreview.Image, width, height))
-                    {
-                        TPLDefinition.TPL encoded = textureEncoder.EncodeImage(resized, colorCount, interlace);
-                        int expectedLength = TplReader.GetPixelDataLength(width, height, bitDepth);
-                        if (encoded.pixels.Length != expectedLength)
-                            throw new InvalidDataException("Encoded mipmap size does not match the existing mipmap payload.");
-                        if ((long)pixelsOffset + expectedLength > stream.Length)
-                            throw new InvalidDataException("Mipmap pixel range is outside the TPL file.");
-
-                        stream.Position = pixelsOffset;
-                        writer.Write(encoded.pixels);
-                    }
-                }
-            }
+            EnsureBackup();
+            if (String.IsNullOrWhiteSpace(filepath) || selectedRowIndexGlobal < 0) return;
+            mipmapService.Regenerate(filepath, selectedRowIndexGlobal);
+            UpdateStatusText("Mipmaps regenerated using the parent texture CLUT");
         }
         private void Remove()
         {
@@ -1426,71 +1433,10 @@ namespace RE4_PS2_TPL_Manager
         private void RemoveMipmaps()
         {
             EnsureBackup();
-            ReadTexture(filepath, selectedRowIndexGlobal);
-            int pixelsLengthAcumulator = 0;
-
-            BinaryReader br = new BinaryReader(File.Open(filepath, FileMode.Open));
-
-            // Get length of each mipmap pixels chunk and stores at variable
-            for (int i = 0; i < 2; i++)
-            {
-                if (i == 0)
-                {
-                    br.BaseStream.Position = TPL.mipmapOffset1;
-                }
-                else
-                {
-                    br.BaseStream.Position = TPL.mipmapOffset2;
-                }
-                MipMap.width = br.ReadUInt16();
-                MipMap.height = br.ReadUInt16();
-                MipMap.bitDepth = br.ReadUInt16();
-
-                switch (MipMap.bitDepth)
-                {
-                    case 8:
-                        pixelsLengthAcumulator += MipMap.width * MipMap.height / 2;
-                        break;
-                    case 9:
-                        pixelsLengthAcumulator += MipMap.width * MipMap.height;
-                        break;
-                    default:
-                        break;
-                }
-            }
-
-            // From the beginning to the start of the mipmap header
-            br.BaseStream.Position = 0;
-            byte[] part1 = br.ReadBytes((int)TPL.mipmapOffset1);
-            br.BaseStream.Position = TPL.mipmapOffset1 + 0x20;
-            MipMap.pixelsOffset = br.ReadUInt32();
-            br.BaseStream.Position = TPL.mipmapOffset1 + 0x60;
-
-            // After the header to the start of the pixels chunk
-            byte[] part2 = br.ReadBytes((int)(MipMap.pixelsOffset - br.BaseStream.Position));
-            br.BaseStream.Position += pixelsLengthAcumulator;
-
-            // After the pixels chunk to the end of the file
-            byte[] part3 = br.ReadBytes((int)(br.BaseStream.Length - br.BaseStream.Position));
-            br.Close();
-
-            // Overwrite .tpl and remove texture
-            BinaryWriter bw = new BinaryWriter(File.Open(filepath, FileMode.Create));
-            bw.Write(part1);
-            bw.Write(part2);
-            bw.Write(part3);
-
-            // Update texture header mipmaps count
-            bw.BaseStream.Position = 0x1A + (0x30 * selectedRowIndexGlobal);
-            bw.Write((ushort)0x00);
-            bw.BaseStream.Position = 0x20 + (0x30 * selectedRowIndexGlobal);
-            bw.Write((long)0x00);
-            bw.Write((long)0x00);
-            bw.Close();
-
+            if (String.IsNullOrWhiteSpace(filepath) || selectedRowIndexGlobal < 0) return;
+            mipmapService.RemoveMipmaps(filepath, selectedRowIndexGlobal);
             UpdateStatusText("Mipmaps removed successfully");
-            UpdateAllOffsets(filepath);
-            FillTable();
+            RefreshTableAndKeepSelection(selectedRowIndexGlobal);
         }
         private void Rearrange()
         {
@@ -1811,6 +1757,7 @@ namespace RE4_PS2_TPL_Manager
                 TPLDefinition.TPL destination = tplReader.ReadTexture(filepath, i);
                 TPLDefinition.TPL replacement = textureEncoder.EncodeImage(image, 256, destination.interlace);
                 tplWriter.ReplaceTexture(filepath, i, replacement);
+                if (destination.mipmapCount > 0) mipmapService.Regenerate(filepath, i);
             }
             UpdateStatusText("All eligible textures converted to 256 colors");
             RefreshTableAndKeepSelection(selectedRowIndexGlobal);
@@ -1828,6 +1775,7 @@ namespace RE4_PS2_TPL_Manager
                 TPLDefinition.TPL destination = tplReader.ReadTexture(filepath, i);
                 TPLDefinition.TPL replacement = textureEncoder.EncodeImage(image, 16, destination.interlace);
                 tplWriter.ReplaceTexture(filepath, i, replacement);
+                if (destination.mipmapCount > 0) mipmapService.Regenerate(filepath, i);
             }
             UpdateStatusText("All eligible textures converted to 16 colors");
             RefreshTableAndKeepSelection(selectedRowIndexGlobal);
@@ -1848,20 +1796,12 @@ namespace RE4_PS2_TPL_Manager
             ConverterBMP converterBMP = new ConverterBMP();
             converterBMP.BMPtoTPL(openFileDialog.FileNames);
         }
-        private void fixBrokenTPLexperimentalToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            OpenFileDialog openFileDialog = new OpenFileDialog();
-            openFileDialog.Filter = "TPL Files (*.tpl)|*.tpl";
-            if (openFileDialog.ShowDialog() != DialogResult.OK) return;
-            UpdateAllOffsets(openFileDialog.FileName);
-            openFileDialog.Dispose();
-        }
         // Table events
         private void table_CellClick(object sender, DataGridViewCellEventArgs e)
         {
             if (e.RowIndex >= 0)
             {
-                texturePreview.Image = (Bitmap)(table.Rows[e.RowIndex].Cells[0].Value);
+                LoadEditorImage(table.Rows[e.RowIndex].Cells[0].Value as Image, true);
                 texturePreview.Invalidate();
                 UpdateTextureSelectionStatus(e.RowIndex);
             }
@@ -1878,7 +1818,7 @@ namespace RE4_PS2_TPL_Manager
                 table.ClearSelection();
                 table.Rows[e.RowIndex].Selected = true;
                 if (e.ColumnIndex >= 0) table.CurrentCell = table.Rows[e.RowIndex].Cells[e.ColumnIndex];
-                texturePreview.Image = table.Rows[e.RowIndex].Cells[0].Value as Bitmap;
+                LoadEditorImage(table.Rows[e.RowIndex].Cells[0].Value as Image, true);
                 texturePreview.Invalidate();
                 UpdateTextureSelectionStatus(e.RowIndex);
                 ctxMenuTable.Show(Cursor.Position);
@@ -1889,7 +1829,7 @@ namespace RE4_PS2_TPL_Manager
             if (e.RowIndex >= 0)
             {
                 selectedRowIndexGlobal = e.RowIndex;
-                texturePreview.Image = (Bitmap)(table.Rows[e.RowIndex].Cells[0].Value);
+                LoadEditorImage(table.Rows[e.RowIndex].Cells[0].Value as Image, true);
                 texturePreview.Invalidate();
                 UpdateTextureSelectionStatus(e.RowIndex);
             }
@@ -2062,144 +2002,207 @@ namespace RE4_PS2_TPL_Manager
             // v1.1.3: no fixed temporary application directory is created or cleaned up.
             Console.WriteLine();
         }
-        // Editor 
-        private void spinBrightness_ValueChanged(object sender, EventArgs e)
+        // Editor
+        private void trackBrightness_ValueChanged(object sender, EventArgs e) { SyncNumericFromTrack(trackBrightness, spinBrightness); }
+        private void trackContrast_ValueChanged(object sender, EventArgs e) { SyncNumericFromTrack(trackContrast, spinContrast); }
+        private void trackSaturation_ValueChanged(object sender, EventArgs e) { SyncNumericFromTrack(trackSaturation, spinSaturation); }
+        private void trackHue_ValueChanged(object sender, EventArgs e) { SyncNumericFromTrack(trackHue, spinHue); }
+        private void trackSharpen_ValueChanged(object sender, EventArgs e) { SyncNumericFromTrack(trackSharpen, spinSharpen); }
+        private void trackPixelate_ValueChanged(object sender, EventArgs e) { SyncNumericFromTrack(trackPixelate, spinPixelate); }
+
+        private void spinBrightness_ValueChanged(object sender, EventArgs e) { SyncTrackFromNumeric(trackBrightness, spinBrightness); RebuildEditorPreview(); }
+        private void spinContrast_ValueChanged(object sender, EventArgs e) { SyncTrackFromNumeric(trackContrast, spinContrast); RebuildEditorPreview(); }
+        private void spinSaturation_ValueChanged(object sender, EventArgs e) { SyncTrackFromNumeric(trackSaturation, spinSaturation); RebuildEditorPreview(); }
+        private void spinSharpen_ValueChanged(object sender, EventArgs e) { SyncTrackFromNumeric(trackSharpen, spinSharpen); RebuildEditorPreview(); }
+        private void spinPixelate_ValueChanged(object sender, EventArgs e) { SyncTrackFromNumeric(trackPixelate, spinPixelate); RebuildEditorPreview(); }
+        private void spinHue_ValueChanged(object sender, EventArgs e) { SyncTrackFromNumeric(trackHue, spinHue); RebuildEditorPreview(); }
+
+        private void SyncTrackFromNumeric(TrackBar track, NumericUpDown numeric)
         {
-            if (texturePreview.Image != null)
+            if (suppressEditorEvents || track == null) return;
+            int value = Math.Max(track.Minimum, Math.Min(track.Maximum, Decimal.ToInt32(numeric.Value)));
+            if (track.Value != value)
             {
-                ImageFactory imageFactory = new ImageFactory();
-                imageFactory.Load(texturePreview.Image);
-                imageFactory.Brightness((int)spinBrightness.Value);
-                texturePreview.Image = imageFactory.Image;
+                suppressEditorEvents = true;
+                track.Value = value;
+                suppressEditorEvents = false;
             }
         }
-        private void spinContrast_ValueChanged(object sender, EventArgs e)
+
+        private void SyncNumericFromTrack(TrackBar track, NumericUpDown numeric)
         {
-            if (texturePreview.Image != null)
+            if (suppressEditorEvents) return;
+            decimal value = Math.Max((decimal)numeric.Minimum, Math.Min((decimal)numeric.Maximum, track.Value));
+            if (numeric.Value != value)
             {
-                ImageFactory imageFactory = new ImageFactory();
-                imageFactory.Load(texturePreview.Image);
-                imageFactory.Contrast((int)spinContrast.Value);
-                texturePreview.Image = imageFactory.Image;
+                suppressEditorEvents = true;
+                numeric.Value = value;
+                suppressEditorEvents = false;
+            }
+            RebuildEditorPreview();
+        }
+
+        private void LoadEditorImage(Image image, bool resetAdjustments)
+        {
+            if (image == null) return;
+            if (editorBaseImage != null) editorBaseImage.Dispose();
+            editorBaseImage = new Bitmap(image);
+            if (resetAdjustments) ResetAdjustmentValues();
+            editorHasChanges = false;
+            RenderEditorPreview(false);
+        }
+
+        private void ResetAdjustmentValues()
+        {
+            suppressEditorEvents = true;
+            spinBrightness.Value = 0;
+            spinContrast.Value = 0;
+            spinSaturation.Value = 0;
+            spinSharpen.Value = 0;
+            spinPixelate.Value = 0;
+            spinHue.Value = 0;
+            foreach (TrackBar track in new[] { trackBrightness, trackContrast, trackSaturation, trackSharpen, trackPixelate, trackHue })
+                if (track != null) track.Value = 0;
+            suppressEditorEvents = false;
+        }
+
+        private Bitmap RunImageProcessor(Bitmap source, Action<ImageFactory> operation)
+        {
+            using (ImageFactory factory = new ImageFactory())
+            {
+                factory.Load(new Bitmap(source));
+                operation(factory);
+                return new Bitmap(factory.Image);
             }
         }
-        private void spinSaturation_ValueChanged(object sender, EventArgs e)
+
+        private void RebuildEditorPreview()
         {
-            if (texturePreview.Image != null)
+            if (suppressEditorEvents || editorBaseImage == null) return;
+            RenderEditorPreview(true);
+        }
+
+        private void RenderEditorPreview(bool markChanged)
+        {
+            if (editorBaseImage == null) return;
+            Bitmap rendered = new Bitmap(editorBaseImage);
+            try
             {
-                ImageFactory imageFactory = new ImageFactory();
-                imageFactory.Load(texturePreview.Image);
-                imageFactory.Saturation((int)spinSaturation.Value);
-                texturePreview.Image = imageFactory.Image;
+                if (spinBrightness.Value != 0) { Bitmap next = RunImageProcessor(rendered, f => f.Brightness((int)spinBrightness.Value)); rendered.Dispose(); rendered = next; }
+                if (spinContrast.Value != 0) { Bitmap next = RunImageProcessor(rendered, f => f.Contrast((int)spinContrast.Value)); rendered.Dispose(); rendered = next; }
+                if (spinSaturation.Value != 0) { Bitmap next = RunImageProcessor(rendered, f => f.Saturation((int)spinSaturation.Value)); rendered.Dispose(); rendered = next; }
+                if (spinHue.Value != 0) { Bitmap next = RunImageProcessor(rendered, f => f.Hue((int)spinHue.Value)); rendered.Dispose(); rendered = next; }
+                if (spinSharpen.Value > 0) { Bitmap next = RunImageProcessor(rendered, f => f.GaussianSharpen((int)spinSharpen.Value)); rendered.Dispose(); rendered = next; }
+                if (spinPixelate.Value > 0) { Bitmap next = RunImageProcessor(rendered, f => f.Pixelate((int)spinPixelate.Value)); rendered.Dispose(); rendered = next; }
+
+                Image old = texturePreview.Image;
+                texturePreview.Image = rendered;
+                if (old != null && !ReferenceEquals(old, editorBaseImage) && !IsTableThumbnail(old)) old.Dispose();
+                if (markChanged) editorHasChanges = true;
+                UpdateEditorChangesLabel();
+            }
+            catch
+            {
+                rendered.Dispose();
+                throw;
             }
         }
-        private void spinSharpen_ValueChanged(object sender, EventArgs e)
+
+        private bool IsTableThumbnail(Image image)
         {
-            if (texturePreview.Image != null)
+            foreach (DataGridViewRow row in table.Rows)
+                if (ReferenceEquals(row.Cells[0].Value, image)) return true;
+            return false;
+        }
+
+        private void UpdateEditorChangesLabel()
+        {
+            if (editorChangesLabel == null) return;
+            editorChangesLabel.Text = editorHasChanges ? "● Unsaved changes" : "No pending changes";
+            button1.Text = editorHasChanges ? "✓ Apply *" : "✓ Apply";
+            editorChangesLabel.ForeColor = editorHasChanges ? Color.Gainsboro : Color.Gray;
+        }
+
+        private void TransformEditorBase(Action<Bitmap> transform)
+        {
+            if (editorBaseImage == null) return;
+            Bitmap next = new Bitmap(editorBaseImage);
+            transform(next);
+            editorBaseImage.Dispose();
+            editorBaseImage = next;
+            editorHasChanges = true;
+            RenderEditorPreview(false);
+        }
+
+        private void btnRotate_Click_1(object sender, EventArgs e) { TransformEditorBase(b => b.RotateFlip(RotateFlipType.Rotate90FlipNone)); }
+        private void btnFlipX_Click(object sender, EventArgs e) { TransformEditorBase(b => b.RotateFlip(RotateFlipType.RotateNoneFlipX)); }
+        private void btnFlipY_Click(object sender, EventArgs e) { TransformEditorBase(b => b.RotateFlip(RotateFlipType.RotateNoneFlipY)); }
+
+        private void btnResize_Click(object sender, EventArgs e)
+        {
+            if (editorBaseImage == null) return;
+
+            using (DialogResizeTexture dialogResize = new DialogResizeTexture(editorBaseImage))
             {
-                ImageFactory imageFactory = new ImageFactory();
-                imageFactory.Load(texturePreview.Image);
-                imageFactory.GaussianSharpen((int)spinSharpen.Value);
-                texturePreview.Image = imageFactory.Image;
+                if (dialogResize.ShowDialog(this) != DialogResult.OK)
+                    return;
+
+                Bitmap next = ResizeEditorImage(editorBaseImage, dialogResize.TargetWidth, dialogResize.TargetHeight, dialogResize.Resampling);
+                editorBaseImage.Dispose();
+                editorBaseImage = next;
+                editorHasChanges = true;
+                RenderEditorPreview(false);
+                UpdateStatusText($"Texture resized to {dialogResize.TargetWidth}×{dialogResize.TargetHeight} • {dialogResize.Resampling}");
             }
         }
-        private void spinPixelate_ValueChanged(object sender, EventArgs e)
+
+        private Bitmap ResizeEditorImage(Bitmap source, int width, int height, ResizeResampling resampling)
         {
-            if (texturePreview.Image != null)
+            Bitmap result = new Bitmap(width, height, PixelFormat.Format32bppArgb);
+            using (Graphics graphics = Graphics.FromImage(result))
             {
-                ImageFactory imageFactory = new ImageFactory();
-                imageFactory.Load(texturePreview.Image);
-                imageFactory.Pixelate((int)spinPixelate.Value);
-                texturePreview.Image = imageFactory.Image;
+                graphics.CompositingMode = System.Drawing.Drawing2D.CompositingMode.SourceCopy;
+                graphics.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.Half;
+                graphics.InterpolationMode = resampling == ResizeResampling.NearestNeighbor
+                    ? System.Drawing.Drawing2D.InterpolationMode.NearestNeighbor
+                    : resampling == ResizeResampling.Bilinear
+                        ? System.Drawing.Drawing2D.InterpolationMode.HighQualityBilinear
+                        : System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                graphics.DrawImage(source, new Rectangle(0, 0, width, height), 0, 0, source.Width, source.Height, GraphicsUnit.Pixel);
             }
+            return result;
         }
-        private void spinHue_ValueChanged(object sender, EventArgs e)
-        {
-            if (texturePreview.Image != null)
-            {
-                ImageFactory imageFactory = new ImageFactory();
-                imageFactory.Load(texturePreview.Image);
-                imageFactory.Hue((int)spinHue.Value);
-                texturePreview.Image = imageFactory.Image;
-            }
-        }
-        private void btnRotate_Click_1(object sender, EventArgs e)
-        {
-            if (texturePreview.Image != null)
-            {
-                Image image = new Bitmap(texturePreview.Image);
-                image.RotateFlip(RotateFlipType.Rotate90FlipNone);
-                texturePreview.Image = image;
-            }
-        }
-        private void btnFlipX_Click(object sender, EventArgs e)
-        {
-            if (texturePreview.Image != null)
-            {
-                Image image = new Bitmap(texturePreview.Image);
-                image.RotateFlip(RotateFlipType.RotateNoneFlipX);
-                texturePreview.Image = image;
-            }
-        }
-        private void btnFlipY_Click(object sender, EventArgs e)
-        {
-            if (texturePreview.Image != null)
-            {
-                Image image = new Bitmap(texturePreview.Image);
-                image.RotateFlip(RotateFlipType.RotateNoneFlipY);
-                texturePreview.Image = image;
-            }
-        }
-        private void btnUpscale_Click(object sender, EventArgs e)
-        {
-            if (texturePreview.Image != null)
-            {
-                texturePreview.Image = GetResizeImage((Bitmap)texturePreview.Image, texturePreview.Image.Width * 2, texturePreview.Image.Height * 2);
-            }
-        }
-        private void btnDownscale_Click(object sender, EventArgs e)
-        {
-            if (texturePreview.Image != null)
-            {
-                texturePreview.Image = GetResizeImage((Bitmap)texturePreview.Image, texturePreview.Image.Width / 2, texturePreview.Image.Height / 2);
-            }
-        }
+
         private void btnReset_Click(object sender, EventArgs e)
         {
-            if (texturePreview.Image != null && filepath != "")
+            if (filepath != "" && table.Rows.Count > 0)
             {
-                texturePreview.Image = (Bitmap)table.Rows[selectedRowIndexGlobal].Cells[0].Value;
+                LoadEditorImage(table.Rows[selectedRowIndexGlobal].Cells[0].Value as Image, true);
+                UpdateStatusText("Texture editor reset to original preview");
             }
         }
 
         private void btnApplyChanges_Click_1(object sender, EventArgs e)
         {
-            if (texturePreview.Image != null)
-            {
-                // Verifies if imported texture is wider/smaller than original
-                if (texturePreview.Image.Width.ToString() != table.Rows[selectedRowIndexGlobal].Cells[2].Value.ToString() ||
-texturePreview.Image.Height.ToString() != table.Rows[selectedRowIndexGlobal].Cells[3].Value.ToString())
-                {
-                    DialogResult result = MessageBox.Show("Image dimensions are different from original image, do you want to insert it anyway?",
-                          "Different dimension detected", MessageBoxButtons.OKCancel, MessageBoxIcon.Question);
-                    if (result == DialogResult.OK)
-                    {
-                        table.Rows[selectedRowIndexGlobal].Cells[0].Value = texturePreview.Image;
-                    }
-                }
-                else
-                {
-                    table.Rows[selectedRowIndexGlobal].Cells[0].Value = texturePreview.Image;
-                }
+            if (texturePreview.Image == null) return;
 
-                // Encode the edited preview directly in memory and replace the selected texture.
-                int colorCount = table.Rows[selectedRowIndexGlobal].Cells[4].Value.ToString() == "8-bit" ? 256 : 16;
-                TPLDefinition.TPL destination = tplReader.ReadTexture(filepath, selectedRowIndexGlobal);
-                TPLDefinition.TPL replacement = textureEncoder.EncodeImage(texturePreview.Image, colorCount, destination.interlace);
-                tplWriter.ReplaceTexture(filepath, selectedRowIndexGlobal, replacement);
-                UpdateStatusText("Texture changes applied successfully");
-                RefreshTableAndKeepSelection(selectedRowIndexGlobal);
+            if (texturePreview.Image.Width.ToString() != table.Rows[selectedRowIndexGlobal].Cells[2].Value.ToString() ||
+                texturePreview.Image.Height.ToString() != table.Rows[selectedRowIndexGlobal].Cells[3].Value.ToString())
+            {
+                DialogResult result = MessageBox.Show("Image dimensions are different from original image, do you want to insert it anyway?",
+                    "Different dimension detected", MessageBoxButtons.OKCancel, MessageBoxIcon.Question);
+                if (result != DialogResult.OK) return;
             }
+
+            EnsureBackup();
+            int colorCount = table.Rows[selectedRowIndexGlobal].Cells[4].Value.ToString() == "8-bit" ? 256 : 16;
+            TPLDefinition.TPL destination = tplReader.ReadTexture(filepath, selectedRowIndexGlobal);
+            TPLDefinition.TPL replacement = textureEncoder.EncodeImage(texturePreview.Image, colorCount, destination.interlace);
+            tplWriter.ReplaceTexture(filepath, selectedRowIndexGlobal, replacement);
+            if (destination.mipmapCount > 0) mipmapService.Regenerate(filepath, selectedRowIndexGlobal);
+            editorHasChanges = false;
+            UpdateStatusText("Texture changes applied successfully");
+            RefreshTableAndKeepSelection(selectedRowIndexGlobal);
         }
 
         // Texture preview
@@ -2222,11 +2225,11 @@ texturePreview.Image.Height.ToString() != table.Rows[selectedRowIndexGlobal].Cel
                 if (Path.GetExtension(openFileDialog.FileName).ToLower() == ".tga")
                 {
                     TGASharpLib.TGA tga = new TGASharpLib.TGA(openFileDialog.FileName);
-                    texturePreview.Image = new Bitmap(tga.ToBitmap());
+                    LoadEditorImage(new Bitmap(tga.ToBitmap()), true);
                     return;
                 }
 
-                texturePreview.Image = new Bitmap(openFileDialog.FileName);
+                using (Bitmap imported = new Bitmap(openFileDialog.FileName)) LoadEditorImage(imported, true);
                 openFileDialog.Dispose();
             }
         }
@@ -2340,46 +2343,42 @@ texturePreview.Image.Height.ToString() != table.Rows[selectedRowIndexGlobal].Cel
 
         private void btnFilterComic_Click(object sender, EventArgs e)
         {
-            if (texturePreview.Image != null)
-            {
-                ImageFactory imageFactory = new ImageFactory();
-                imageFactory.Load(texturePreview.Image);
-                imageFactory.Filter(MatrixFilters.Comic);
-                texturePreview.Image = imageFactory.Image;
-            }
+            if (editorBaseImage == null) return;
+            Bitmap next = RunImageProcessor(editorBaseImage, f => f.Filter(MatrixFilters.Comic));
+            editorBaseImage.Dispose();
+            editorBaseImage = next;
+            editorHasChanges = true;
+            RenderEditorPreview(false);
         }
 
         private void btnFilterGray_Click(object sender, EventArgs e)
         {
-            if (texturePreview.Image != null)
-            {
-                ImageFactory imageFactory = new ImageFactory();
-                imageFactory.Load(texturePreview.Image);
-                imageFactory.Filter(MatrixFilters.GreyScale);
-                texturePreview.Image = imageFactory.Image;
-            }
+            if (editorBaseImage == null) return;
+            Bitmap next = RunImageProcessor(editorBaseImage, f => f.Filter(MatrixFilters.GreyScale));
+            editorBaseImage.Dispose();
+            editorBaseImage = next;
+            editorHasChanges = true;
+            RenderEditorPreview(false);
         }
 
         private void btnFilterColorful_Click(object sender, EventArgs e)
         {
-            if (texturePreview.Image != null)
-            {
-                ImageFactory imageFactory = new ImageFactory();
-                imageFactory.Load(texturePreview.Image);
-                imageFactory.Filter(MatrixFilters.HiSatch);
-                texturePreview.Image = imageFactory.Image;
-            }
+            if (editorBaseImage == null) return;
+            Bitmap next = RunImageProcessor(editorBaseImage, f => f.Filter(MatrixFilters.HiSatch));
+            editorBaseImage.Dispose();
+            editorBaseImage = next;
+            editorHasChanges = true;
+            RenderEditorPreview(false);
         }
 
         private void btnFilterInvert_Click(object sender, EventArgs e)
         {
-            if (texturePreview.Image != null)
-            {
-                ImageFactory imageFactory = new ImageFactory();
-                imageFactory.Load(texturePreview.Image);
-                imageFactory.Filter(MatrixFilters.Invert);
-                texturePreview.Image = imageFactory.Image;
-            }
+            if (editorBaseImage == null) return;
+            Bitmap next = RunImageProcessor(editorBaseImage, f => f.Filter(MatrixFilters.Invert));
+            editorBaseImage.Dispose();
+            editorBaseImage = next;
+            editorHasChanges = true;
+            RenderEditorPreview(false);
         }
 
         private void btnLayerAddMask_Click(object sender, EventArgs e)
@@ -2395,7 +2394,7 @@ texturePreview.Image.Height.ToString() != table.Rows[selectedRowIndexGlobal].Cel
                     DialogResult result = DialogResult.OK;
                     Image image = Image.FromFile(dialog.FileName);
                     // Verifies if selected image has a different aspect ration from the one in the preview
-                    if (image.Width != texturePreview.Image.Width || image.Height != texturePreview.Image.Height)
+                    if (editorBaseImage == null || image.Width != editorBaseImage.Width || image.Height != editorBaseImage.Height)
                     {
                         result = MessageBox.Show("The selected image has a different size from original," +
                             " the results may not be good.\nProceed anyway?", "Different resolution detected",
@@ -2408,10 +2407,17 @@ texturePreview.Image.Height.ToString() != table.Rows[selectedRowIndexGlobal].Cel
                         ImageLayer imageLayer = new ImageLayer();
                         imageLayer.Image = Image.FromFile(dialog.FileName);
 
-                        ImageFactory imageFactory = new ImageFactory();
-                        imageFactory.Load(texturePreview.Image);
-                        imageFactory.Mask(imageLayer);
-                        texturePreview.Image = imageFactory.Image;
+                        Bitmap next;
+                        using (ImageFactory imageFactory = new ImageFactory())
+                        {
+                            imageFactory.Load(new Bitmap(editorBaseImage));
+                            imageFactory.Mask(imageLayer);
+                            next = new Bitmap(imageFactory.Image);
+                        }
+                        editorBaseImage.Dispose();
+                        editorBaseImage = next;
+                        editorHasChanges = true;
+                        RenderEditorPreview(false);
                         imageLayer.Dispose();
                     }
                 }
@@ -2431,7 +2437,7 @@ texturePreview.Image.Height.ToString() != table.Rows[selectedRowIndexGlobal].Cel
                     DialogResult result = DialogResult.OK;
                     Image image = Image.FromFile(dialog.FileName);
                     // Verifies if selected image has a different aspect ration from the one in the preview
-                    if (image.Width != texturePreview.Image.Width || image.Height != texturePreview.Image.Height)
+                    if (editorBaseImage == null || image.Width != editorBaseImage.Width || image.Height != editorBaseImage.Height)
                     {
                         result = MessageBox.Show("The selected image has a different size from original," +
                             " the results may not be good.\nProceed anyway?", "Different resolution detected",
@@ -2444,10 +2450,17 @@ texturePreview.Image.Height.ToString() != table.Rows[selectedRowIndexGlobal].Cel
                         ImageLayer imageLayer = new ImageLayer();
                         imageLayer.Image = Image.FromFile(dialog.FileName);
 
-                        ImageFactory imageFactory = new ImageFactory();
-                        imageFactory.Load(texturePreview.Image);
-                        imageFactory.Overlay(imageLayer);
-                        texturePreview.Image = imageFactory.Image;
+                        Bitmap next;
+                        using (ImageFactory imageFactory = new ImageFactory())
+                        {
+                            imageFactory.Load(new Bitmap(editorBaseImage));
+                            imageFactory.Overlay(imageLayer);
+                            next = new Bitmap(imageFactory.Image);
+                        }
+                        editorBaseImage.Dispose();
+                        editorBaseImage = next;
+                        editorHasChanges = true;
+                        RenderEditorPreview(false);
                         imageLayer.Dispose();
                     }
                 }
@@ -2656,58 +2669,6 @@ texturePreview.Image.Height.ToString() != table.Rows[selectedRowIndexGlobal].Cel
             }
         }
 
-        private void fixTransparencyToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            try
-            {
-                // Fix transparency issue from 0xFF to 0x80
-                for (int i = 0; i < TPL.tplCount; i++)
-                {
-                    ReadTexture(filepath, i);
-
-                    BinaryWriter bw = new BinaryWriter(File.Open(filepath, FileMode.Open));
-                    bw.BaseStream.Position = TPL.paletteOffset + 0x03; // moves to first alpha byte
-
-                    if (TPL.bitDepth == 8)
-                    {
-                        for (int c = 3; c < 0x80; c += 4)
-                        {
-                            if (TPL.palette[c] == 255)
-                            {
-                                bw.Write((byte)0x80);
-                                bw.BaseStream.Position += 3;
-                            }
-                            else
-                            {
-                                bw.BaseStream.Position += 4;
-                            }
-                        }
-                    }
-                    else
-                    {
-                        for (int c = 3; c < 0x400; c += 4)
-                        {
-                            if (TPL.palette[c] == 255)
-                            {
-                                bw.Write((byte)0x80);
-                                bw.BaseStream.Position += 3;
-                            }
-                            else
-                            {
-                                bw.BaseStream.Position += 4;
-                            }
-                        }
-                    }
-                    bw.Close();
-                    UpdateStatusText("All transparencies fixed (0xFF to 0x80)");
-                }
-                RefreshTableAndKeepSelection(selectedRowIndexGlobal);
-            }
-            catch (Exception exc)
-            {
-                MessageBox.Show(exc.Message);
-            }
-        }
 
         private void batchReplaceToolStripMenuItem_Click(object sender, EventArgs e)
         {
@@ -2814,6 +2775,7 @@ texturePreview.Image.Height.ToString() != table.Rows[selectedRowIndexGlobal].Cel
         {
             recentFilesMenu = new ToolStripMenuItem("Recent files");
             fileToolStripMenuItem.DropDownItems.Insert(Math.Min(3, fileToolStripMenuItem.DropDownItems.Count), recentFilesMenu);
+            DarkTheme.ApplyToToolStripItem(recentFilesMenu);
             LoadRecentFiles(); RefreshRecentFilesMenu();
         }
         private void LoadRecentFiles()
@@ -2836,9 +2798,17 @@ texturePreview.Image.Height.ToString() != table.Rows[selectedRowIndexGlobal].Cel
             foreach (string path in recentFiles.ToArray())
             {
                 var item = new ToolStripMenuItem(Path.GetFileName(path)) { ToolTipText = path, Tag = path };
-                item.Click += (o, a) => OpenRecentFile(Convert.ToString(((ToolStripMenuItem)o).Tag)); recentFilesMenu.DropDownItems.Add(item);
+                item.Click += (o, a) => OpenRecentFile(Convert.ToString(((ToolStripMenuItem)o).Tag));
+                recentFilesMenu.DropDownItems.Add(item);
+                DarkTheme.ApplyToToolStripItem(item);
             }
-            if (recentFilesMenu.DropDownItems.Count == 0) recentFilesMenu.DropDownItems.Add(new ToolStripMenuItem("(empty)") { Enabled = false });
+            if (recentFilesMenu.DropDownItems.Count == 0)
+            {
+                var emptyItem = new ToolStripMenuItem("(empty)") { Enabled = false };
+                recentFilesMenu.DropDownItems.Add(emptyItem);
+                DarkTheme.ApplyToToolStripItem(emptyItem);
+            }
+            DarkTheme.ApplyToToolStripItem(recentFilesMenu);
         }
         private void OpenRecentFile(string path)
         {

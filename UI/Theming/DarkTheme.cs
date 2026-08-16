@@ -1,4 +1,4 @@
-using System.Drawing;
+﻿using System.Drawing;
 using System.Windows.Forms;
 
 namespace RE4_PS2_TPL_Manager.UI.Theming
@@ -198,6 +198,14 @@ namespace RE4_PS2_TPL_Manager.UI.Theming
             strip.Renderer = new ToolStripProfessionalRenderer(new DarkColorTable());
 
             foreach (ToolStripItem item in strip.Items)
+            {
+                StyleToolStripItem(item);
+            }
+        }
+
+        public static void ApplyToToolStripItem(ToolStripItem item)
+        {
+            if (item != null)
             {
                 StyleToolStripItem(item);
             }

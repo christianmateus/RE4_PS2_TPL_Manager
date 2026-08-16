@@ -203,6 +203,109 @@ namespace RE4_PS2_TPL_Manager.Core.Services
             }
         }
 
+        /// <summary>
+        /// Rebuilds the complete TPL from in-memory texture models. Main headers are followed by
+        /// mipmap headers, then main pixel/CLUT data, then mipmap pixel data, matching RE4 PS2 files.
+        /// </summary>
+        public void RebuildFile(string path, System.Collections.Generic.IList<TplModel> textures)
+        {
+            if (String.IsNullOrWhiteSpace(path)) throw new ArgumentException("TPL path is empty.", nameof(path));
+            if (textures == null) throw new ArgumentNullException(nameof(textures));
+
+            int mipHeaderCount = 0;
+            for (int i = 0; i < textures.Count; i++) mipHeaderCount += Math.Min((ushort)2, textures[i].mipmapCount);
+            uint headerEnd = checked((uint)(0x10 + 0x30 * (textures.Count + mipHeaderCount)));
+            uint mipHeaderCursor = checked((uint)(0x10 + 0x30 * textures.Count));
+            uint dataCursor = headerEnd;
+
+            byte[][] mainHeaders = new byte[textures.Count][];
+            System.Collections.Generic.List<byte[]> mipHeaders = new System.Collections.Generic.List<byte[]>(mipHeaderCount);
+            System.Collections.Generic.List<byte[]> mipPixels = new System.Collections.Generic.List<byte[]>(mipHeaderCount);
+
+            // Main payload offsets are assigned first. RE4 stores each main pixel block followed by its CLUT.
+            for (int i = 0; i < textures.Count; i++)
+            {
+                TplModel texture = textures[i];
+                byte[] header = CloneHeader(texture.header);
+                ushort mipCount = Math.Min((ushort)2, texture.mipmapCount);
+                PatchUInt16(header, 0x0A, mipCount);
+                PatchUInt32(header, 0x10, mipCount > 0 ? mipHeaderCursor : 0);
+                if (mipCount > 0) mipHeaderCursor += 0x30;
+                PatchUInt32(header, 0x14, mipCount > 1 ? mipHeaderCursor : 0);
+                if (mipCount > 1) mipHeaderCursor += 0x30;
+
+                PatchUInt32(header, 0x20, dataCursor);
+                dataCursor = checked(dataCursor + (uint)(texture.pixels == null ? 0 : texture.pixels.Length));
+                if (texture.palette != null && texture.palette.Length > 0)
+                {
+                    PatchUInt32(header, 0x24, dataCursor);
+                    dataCursor = checked(dataCursor + (uint)texture.palette.Length);
+                }
+                else PatchUInt32(header, 0x24, 0);
+                mainHeaders[i] = header;
+            }
+
+            // Build mip headers in parent order. Mips share the parent CLUT, so paletteOffset stays zero.
+            for (int i = 0; i < textures.Count; i++)
+            {
+                TplModel texture = textures[i];
+                int count = Math.Min((ushort)2, texture.mipmapCount);
+                for (int m = 0; m < count; m++)
+                {
+                    byte[] header = CloneHeader(m == 0 ? texture.mipmapHeader1 : texture.mipmapHeader2);
+                    byte[] pixels = m == 0 ? texture.mipmapPixels1 : texture.mipmapPixels2;
+                    if (pixels == null) pixels = new byte[0];
+                    PatchUInt32(header, 0x10, 0);
+                    PatchUInt32(header, 0x14, 0);
+                    PatchUInt32(header, 0x20, dataCursor);
+                    PatchUInt32(header, 0x24, 0);
+                    dataCursor = checked(dataCursor + (uint)pixels.Length);
+                    mipHeaders.Add(header);
+                    mipPixels.Add(pixels);
+                }
+            }
+
+            using (MemoryStream output = new MemoryStream())
+            {
+                using (BinaryWriter bw = new BinaryWriter(output, System.Text.Encoding.Default, true))
+                {
+                    bw.Write((uint)0x1000);
+                    bw.Write((uint)textures.Count);
+                    bw.Write((uint)0x10);
+                    bw.Write((uint)0);
+                    for (int i = 0; i < mainHeaders.Length; i++) bw.Write(mainHeaders[i]);
+                    for (int i = 0; i < mipHeaders.Count; i++) bw.Write(mipHeaders[i]);
+                    for (int i = 0; i < textures.Count; i++)
+                    {
+                        if (textures[i].pixels != null) bw.Write(textures[i].pixels);
+                        if (textures[i].palette != null && textures[i].palette.Length > 0) bw.Write(textures[i].palette);
+                    }
+                    for (int i = 0; i < mipPixels.Count; i++) bw.Write(mipPixels[i]);
+                    bw.Flush();
+                }
+                File.WriteAllBytes(path, output.ToArray());
+            }
+        }
+
+        private static byte[] CloneHeader(byte[] header)
+        {
+            if (header == null || header.Length != 0x30)
+                throw new InvalidDataException("A TPL/mipmap header must contain exactly 0x30 bytes.");
+            return (byte[])header.Clone();
+        }
+
+        private static void PatchUInt16(byte[] data, int offset, ushort value)
+        {
+            byte[] bytes = BitConverter.GetBytes(value);
+            Buffer.BlockCopy(bytes, 0, data, offset, 2);
+        }
+
+        private static void PatchUInt32(byte[] data, int offset, uint value)
+        {
+            byte[] bytes = BitConverter.GetBytes(value);
+            Buffer.BlockCopy(bytes, 0, data, offset, 4);
+        }
+
         private static void PreserveMipMapMetadata(byte[] targetHeader, byte[] replacementHeader)
         {
             if (targetHeader == null || replacementHeader == null || targetHeader.Length < 0x30 || replacementHeader.Length < 0x30)

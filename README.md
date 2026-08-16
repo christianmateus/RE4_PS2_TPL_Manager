@@ -2,8 +2,6 @@
 
 A texture management tool for **Resident Evil 4 on PlayStation 2**, designed to make working with the game's `.TPL` texture files easier.
 
-> Built primarily for RE4 PS2 modding and research.
-
 ![TPL Manager Screenshot](Images/screenshot.png)
 
 ## Features

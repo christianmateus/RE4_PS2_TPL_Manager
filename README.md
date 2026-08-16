@@ -80,6 +80,6 @@ When reporting an issue, including the following information can make troublesho
 ## Credits
 
 Deinterlace and swizzle algorithms based on **JADERLINK**'s research.
-Created for the Resident Evil 4 PS2 modding community.
 
+Created for the Resident Evil 4 PS2 modding community.
 Resident Evil and Resident Evil 4 are properties of Capcom. This is an unofficial fan-made modding tool and is not affiliated with or endorsed by Capcom.
